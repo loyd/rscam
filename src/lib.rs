@@ -12,11 +12,13 @@ mod v4l2;
 
 pub struct FormatInfo {
     pub format: [u8, ..4],
-    pub desc: String
+    pub desc: String,
+    pub compressed: bool,
+    pub emulated: bool
 }
 
 impl FormatInfo {
-    fn new(fourcc: u32, desc: &[u8, ..32]) -> FormatInfo {
+    fn new(fourcc: u32, desc: &[u8, ..32], flags: u32) -> FormatInfo {
         FormatInfo {
             format: [
                 (fourcc >> 0 & 0xff) as u8,
@@ -27,7 +29,10 @@ impl FormatInfo {
 
             desc: unsafe {
                 String::from_raw_buf(desc.as_ptr())
-            }
+            },
+
+            compressed: flags & v4l2::FMT_FLAG_COMPRESSED != 0,
+            emulated: flags & v4l2::FMT_FLAG_EMULATED != 0
         }
     }
 
@@ -39,7 +44,13 @@ impl FormatInfo {
 
 impl fmt::Show for FormatInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} ({})", str::from_utf8(self.format.as_slice()).unwrap(), self.desc)
+        write!(f, "{} ({}{})", str::from_utf8(self.format.as_slice()).unwrap(),
+            self.desc, match ((self.compressed, self.emulated)) {
+                (true, true) => ", compressed, emulated",
+                (true, false) => ", compressed",
+                (false, true) => ", emulated",
+                _ => ""
+            })
     }
 }
 
@@ -129,7 +140,7 @@ impl<'a> Camera<'a> {
 
         while v4l2::xioctl(self.fd, v4l2::VIDIOC_ENUM_FMT, &mut fmt).is_ok() {
             fmt.index += 1;
-            res.push(FormatInfo::new(fmt.pixelformat, &fmt.description));
+            res.push(FormatInfo::new(fmt.pixelformat, &fmt.description, fmt.flags));
         }
 
         res

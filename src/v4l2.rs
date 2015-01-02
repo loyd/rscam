@@ -267,6 +267,8 @@ pub struct Fract {
     pub denominator: u32
 }
 
+pub static FMT_FLAG_COMPRESSED: u32    = 1;
+pub static FMT_FLAG_EMULATED: u32      = 2;
 pub static BUF_TYPE_VIDEO_CAPTURE: u32 = 1;
 pub static FIELD_INTERLACED: u32       = 4;
 pub static MEMORY_MMAP: u32            = 1;

@@ -14,7 +14,8 @@ pub struct FormatInfo {
     pub format: [u8, ..4],
     pub desc: String,
     pub compressed: bool,
-    pub emulated: bool
+    pub emulated: bool,
+    pub modes: Vec<ModeInfo>
 }
 
 impl FormatInfo {
@@ -32,7 +33,9 @@ impl FormatInfo {
             },
 
             compressed: flags & v4l2::FMT_FLAG_COMPRESSED != 0,
-            emulated: flags & v4l2::FMT_FLAG_EMULATED != 0
+            emulated: flags & v4l2::FMT_FLAG_EMULATED != 0,
+
+            modes: vec![]
         }
     }
 
@@ -51,6 +54,23 @@ impl fmt::Show for FormatInfo {
                 (false, true) => ", emulated",
                 _ => ""
             })
+    }
+}
+
+
+pub struct ModeInfo {
+    pub width: u32,
+    pub height: u32,
+    pub fps: Vec<f32>
+}
+
+impl ModeInfo {
+    pub fn new(width: u32, height: u32) -> ModeInfo {
+        ModeInfo {
+            width: width,
+            height: height,
+            fps: vec![]
+        }
     }
 }
 
@@ -137,10 +157,44 @@ impl<'a> Camera<'a> {
     pub fn formats(&self) -> Vec<FormatInfo> {
         let mut res = vec![];
         let mut fmt = v4l2::FmtDesc::new();
+        let mut size = v4l2::Frmsizeenum::new();
+        let mut ival = v4l2::Frmivalenum::new();
 
+        // Get formats.
         while v4l2::xioctl(self.fd, v4l2::VIDIOC_ENUM_FMT, &mut fmt).is_ok() {
+            let mut format = FormatInfo::new(fmt.pixelformat, &fmt.description, fmt.flags);
+
+            size.index = 0;
+            size.pixelformat = fmt.pixelformat;
+            ival.pixelformat = fmt.pixelformat;
+
+            // Get modes.
+            while v4l2::xioctl(self.fd, v4l2::VIDIOC_ENUM_FRAMESIZES, &mut size).is_ok() {
+                if size.ftype != v4l2::FRMSIZE_TYPE_DISCRETE {
+                    size.index += 1;
+                    continue;
+                }
+
+                let mut mode = ModeInfo::new(size.discrete.width, size.discrete.height);
+
+                ival.index = 0;
+                ival.width = mode.width;
+                ival.height = mode.height;
+
+                // Get fps.
+                while v4l2::xioctl(self.fd, v4l2::VIDIOC_ENUM_FRAMEINTERVALS, &mut ival).is_ok() {
+                    let fps = ival.discrete.denominator as f32 / ival.discrete.numerator as f32;
+
+                    mode.fps.push(fps);
+                    ival.index += 1;
+                }
+
+                format.modes.push(mode);
+                size.index += 1;
+            }
+
+            res.push(format);
             fmt.index += 1;
-            res.push(FormatInfo::new(fmt.pixelformat, &fmt.description, fmt.flags));
         }
 
         res

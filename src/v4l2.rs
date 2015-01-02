@@ -267,17 +267,83 @@ pub struct Fract {
     pub denominator: u32
 }
 
-pub static FMT_FLAG_COMPRESSED: u32    = 1;
-pub static FMT_FLAG_EMULATED: u32      = 2;
+
+#[repr(C)]
+pub struct Frmsizeenum {
+    pub index: u32,
+    pub pixelformat: u32,
+    pub ftype: u32,
+    pub discrete: FrmsizeDiscrete,
+    pub reserved: [u32, ..6]
+}
+
+impl Frmsizeenum {
+    pub fn new() -> Frmsizeenum {
+        Frmsizeenum {
+            index: 0,
+            pixelformat: 0,
+            ftype: 0,
+            discrete: FrmsizeDiscrete {
+                width: 0,
+                height: 0
+            },
+            reserved: [0, ..6]
+        }
+    }
+}
+
+
+#[repr(C)]
+pub struct FrmsizeDiscrete {
+    pub width: u32,
+    pub height: u32
+}
+
+
+#[repr(C)]
+pub struct Frmivalenum {
+    pub index: u32,
+    pub pixelformat: u32,
+    pub width: u32,
+    pub height: u32,
+    pub ftype: u32,
+    pub discrete: Fract,
+    pub reserved: [u32, ..6]
+}
+
+impl Frmivalenum {
+    pub fn new() -> Frmivalenum {
+        Frmivalenum {
+            index: 0,
+            pixelformat: 0,
+            width: 0,
+            height: 0,
+            ftype: 0,
+            discrete: Fract {
+                numerator: 0,
+                denominator: 0
+            },
+            reserved: [0, ..6]
+        }
+    }
+}
+
+
 pub static BUF_TYPE_VIDEO_CAPTURE: u32 = 1;
-pub static FIELD_INTERLACED: u32       = 4;
-pub static MEMORY_MMAP: u32            = 1;
-pub static VIDIOC_S_FMT: uint          = 3234878981;
-pub static VIDIOC_REQBUFS: uint        = 3222558216;
-pub static VIDIOC_QUERYBUF: uint       = 3227014665;
-pub static VIDIOC_QBUF: uint           = 3227014671;
-pub static VIDIOC_STREAMON: uint       = 1074026002;
-pub static VIDIOC_STREAMOFF: uint      = 1074026003;
-pub static VIDIOC_ENUM_FMT: uint       = 3225441794;
-pub static VIDIOC_DQBUF: uint          = 3227014673;
-pub static VIDIOC_S_PARM: uint         = 3234616854;
+pub static FIELD_INTERLACED: u32 = 4;
+pub static FMT_FLAG_COMPRESSED: u32 = 1;
+pub static FMT_FLAG_EMULATED: u32 = 2;
+pub static FRMIVAL_TYPE_DISCRET: u32 = 1;
+pub static FRMSIZE_TYPE_DISCRETE: u32 = 1;
+pub static MEMORY_MMAP: u32 = 1;
+pub static VIDIOC_DQBUF: uint = 3227014673;
+pub static VIDIOC_ENUM_FMT: uint = 3225441794;
+pub static VIDIOC_ENUM_FRAMEINTERVALS: uint = 3224655435;
+pub static VIDIOC_ENUM_FRAMESIZES: uint = 3224131146;
+pub static VIDIOC_QBUF: uint = 3227014671;
+pub static VIDIOC_QUERYBUF: uint = 3227014665;
+pub static VIDIOC_REQBUFS: uint = 3222558216;
+pub static VIDIOC_S_FMT: uint = 3234878981;
+pub static VIDIOC_S_PARM: uint = 3234616854;
+pub static VIDIOC_STREAMOFF: uint = 1074026003;
+pub static VIDIOC_STREAMON: uint = 1074026002;

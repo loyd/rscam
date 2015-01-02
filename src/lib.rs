@@ -48,7 +48,7 @@ impl FormatInfo {
 impl fmt::Show for FormatInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} ({}{})", str::from_utf8(self.format.as_slice()).unwrap(),
-            self.desc, match ((self.compressed, self.emulated)) {
+            self.desc, match (self.compressed, self.emulated) {
                 (true, true) => ", compressed, emulated",
                 (true, false) => ", compressed",
                 (false, true) => ", emulated",
@@ -183,9 +183,11 @@ impl<'a> Camera<'a> {
 
                 // Get fps.
                 while v4l2::xioctl(self.fd, v4l2::VIDIOC_ENUM_FRAMEINTERVALS, &mut ival).is_ok() {
-                    let fps = ival.discrete.denominator as f32 / ival.discrete.numerator as f32;
+                    if ival.ftype == v4l2::FRMIVAL_TYPE_DISCRET {
+                        mode.fps.push(ival.discrete.denominator as f32 /
+                                        ival.discrete.numerator as f32);
+                    }
 
-                    mode.fps.push(fps);
                     ival.index += 1;
                 }
 

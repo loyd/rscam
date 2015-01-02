@@ -86,8 +86,8 @@ impl Format {
                 colorspace: 0,
                 private: 0,
                 flags: 0,
-                ycbcr_enc: 0,
-                quantization: 0
+                // ycbcr_enc: 0,
+                // quantization: 0
             },
             space: [0, ..172]
         }
@@ -106,8 +106,8 @@ pub struct PixFormat {
     pub colorspace: u32,
     pub private: u32,
     pub flags: u32,
-    pub ycbcr_enc: u32,
-    pub quantization: u32
+    // pub ycbcr_enc: u32,
+    // pub quantization: u32
 }
 
 

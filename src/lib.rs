@@ -5,7 +5,7 @@
 
 extern crate libc;
 
-use std::{io, fmt, str, error, default};
+use std::{io, fmt, str, error};
 
 mod v4l2;
 
@@ -61,7 +61,7 @@ impl fmt::Show for FormatInfo {
 pub struct ModeInfo {
     pub width: u32,
     pub height: u32,
-    pub fps: Vec<f32>
+    pub intervals: Vec<(u32, u32)>
 }
 
 impl ModeInfo {
@@ -69,7 +69,7 @@ impl ModeInfo {
         ModeInfo {
             width: width,
             height: height,
-            fps: vec![]
+            intervals: vec![]
         }
     }
 }
@@ -86,7 +86,7 @@ pub enum Error {
     Io(io::IoError),
     BadResolution,
     BadFormat,
-    BadFPS
+    BadInterval
 }
 
 impl error::FromError<io::IoError> for Error {
@@ -98,21 +98,10 @@ impl error::FromError<io::IoError> for Error {
 
 #[derive(Copy)]
 pub struct Config {
-    pub fps: u32,
+    pub interval: (u32, u32),
     pub width: u32,
     pub height: u32,
     pub format: &'static [u8]
-}
-
-impl default::Default for Config {
-    fn default() -> Config {
-        Config {
-            fps: 25,
-            width: 640,
-            height: 480,
-            format: b"RGB3"
-        }
-    }
 }
 
 
@@ -141,7 +130,7 @@ enum State {
 pub struct Camera<'a> {
     state: State,
     fd: int,
-    fps: u32,
+    interval: (u32, u32),
     width: u32,
     height: u32,
     fourcc: u32,
@@ -153,7 +142,7 @@ impl<'a> Camera<'a> {
         Ok(Camera {
             state: State::Idle,
             fd: try!(v4l2::open(device)),
-            fps: 0,
+            interval: (0, 0),
             width: 0,
             height: 0,
             fourcc: 0,
@@ -188,11 +177,10 @@ impl<'a> Camera<'a> {
                 ival.width = mode.width;
                 ival.height = mode.height;
 
-                // Get fps.
+                // Get interval.
                 while v4l2::xioctl(self.fd, v4l2::VIDIOC_ENUM_FRAMEINTERVALS, &mut ival).is_ok() {
                     if ival.ftype == v4l2::FRMIVAL_TYPE_DISCRET {
-                        mode.fps.push(ival.discrete.denominator as f32 /
-                                        ival.discrete.numerator as f32);
+                        mode.intervals.push((ival.discrete.numerator, ival.discrete.denominator));
                     }
 
                     ival.index += 1;
@@ -210,7 +198,7 @@ impl<'a> Camera<'a> {
     }
 
     pub fn start(&mut self, config: &Config) -> Result<(), Error> {
-        self.fps = config.fps;
+        self.interval = config.interval;
         self.width = config.width;
         self.height = config.height;
         self.fourcc = FormatInfo::fourcc(config.format);
@@ -270,14 +258,15 @@ impl<'a> Camera<'a> {
     }
 
     fn tune_stream(&self) -> Result<(), Error> {
-        let mut parm = v4l2::StreamParm::new(self.fps);
+        let mut parm = v4l2::StreamParm::new(self.interval);
 
         try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_S_PARM, &mut parm));
 
         let time = parm.parm.timeperframe;
+        assert!(time.denominator != 0);
 
-        if time.numerator != 1 || time.denominator != self.fps {
-            return Err(Error::BadFPS);
+        if time.numerator * self.interval.1 != time.denominator * self.interval.0 {
+            return Err(Error::BadInterval);
         }
 
         Ok(())

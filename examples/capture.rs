@@ -6,7 +6,7 @@ fn main() {
     let mut camera = rscam::new("/dev/video0").unwrap();
 
     camera.start(&rscam::Config {
-        fps: 10,
+        interval: (1, 10),
         width: 1280,
         height: 720,
         format: b"YUYV"

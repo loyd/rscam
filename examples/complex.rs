@@ -10,7 +10,7 @@ fn main() {
     }
 
     camera.start(&rscam::Config {
-        fps: 10,
+        interval: (1, 10),
         width: 1280,
         height: 720,
         format: b"MJPG"

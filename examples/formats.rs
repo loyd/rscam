@@ -9,8 +9,8 @@ fn main() {
         for mode in format.modes.iter() {
             print!("    {}:", mode);
 
-            for fps in mode.fps.iter() {
-                print!(" {}", fps);
+            for interval in mode.intervals.iter() {
+                print!(" {}", interval);
             }
 
             println!("");

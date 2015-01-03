@@ -247,15 +247,15 @@ pub struct StreamParm {
 }
 
 impl StreamParm {
-    pub fn new(fps: u32) -> StreamParm {
+    pub fn new(interval: (u32, u32)) -> StreamParm {
         StreamParm {
             ptype: BUF_TYPE_VIDEO_CAPTURE,
             parm: CaptureParm {
                 capability: 0,
                 capturemode: 0,
                 timeperframe: Fract {
-                    numerator: 1,
-                    denominator: fps
+                    numerator: interval.0,
+                    denominator: interval.1
                 },
                 extendedmode: 0,
                 readbuffers: 0,

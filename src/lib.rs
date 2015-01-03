@@ -4,8 +4,7 @@
 
 extern crate libc;
 
-use std::{io, fmt, str, error};
-use std::default;
+use std::{io, fmt, str, error, default};
 
 mod v4l2;
 
@@ -71,6 +70,12 @@ impl ModeInfo {
             height: height,
             fps: vec![]
         }
+    }
+}
+
+impl fmt::Show for ModeInfo {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}x{}", self.width, self.height)
     }
 }
 
@@ -218,19 +223,6 @@ impl<'a> Camera<'a> {
         }
 
         self.state = State::Streaming;
-
-        Ok(())
-    }
-
-    pub fn stream(&self, cb: |&[u8]| -> ()) -> io::IoResult<()> {
-        let mut buffer = v4l2::Buffer::new();
-
-        try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_DQBUF, &mut buffer));
-        assert!(buffer.index < self.buffers.len() as u32);
-
-        cb(self.buffers[buffer.index as uint][0..buffer.bytesused as uint]);
-
-        try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_QBUF, &mut buffer));
 
         Ok(())
     }

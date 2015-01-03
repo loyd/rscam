@@ -49,8 +49,6 @@ pub fn mmap<'a>(length: uint, fd: int, offset: uint) -> io::IoResult<&'a mut [u8
     let ptr = unsafe { v4l2_mmap(0 as *mut c_void, length as size_t, PROT_READ|PROT_WRITE,
                                  MAP_SHARED, fd as c_int, offset as off_t) as *mut u8 };
 
-    println!("Allocate {} with {} offset -> {:p}", length, offset, ptr);
-
     check!(ptr != -1 as *mut u8);
     Ok(unsafe { mem::transmute(raw::Slice { data: ptr, len: length}) })
 }
@@ -80,7 +78,7 @@ impl Format {
                 width: width,
                 height: height,
                 pixelformat: fourcc,
-                field: FIELD_INTERLACED,
+                field: FIELD_ANY,
                 bytesperline: 0,
                 sizeimage: 0,
                 colorspace: 0,
@@ -330,7 +328,7 @@ impl Frmivalenum {
 
 
 pub static BUF_TYPE_VIDEO_CAPTURE: u32 = 1;
-pub static FIELD_INTERLACED: u32 = 4;
+pub static FIELD_ANY: u32 = 0;
 pub static FMT_FLAG_COMPRESSED: u32 = 1;
 pub static FMT_FLAG_EMULATED: u32 = 2;
 pub static FRMIVAL_TYPE_DISCRET: u32 = 1;

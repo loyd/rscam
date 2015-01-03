@@ -62,32 +62,39 @@ pub fn munmap(region: &mut [u8]) -> io::IoResult<()> {
 }
 
 #[repr(C)]
+#[cfg(target_word_size="64")]
 pub struct Format {
     pub ftype: u32,
-    pub sp: u32,
+    _padding: u32,
     pub fmt: PixFormat,
-    pub space: [u8, ..172]
+    _space: [u8, ..156]
+}
+
+#[repr(C)]
+#[cfg(target_word_size="32")]
+pub struct Format {
+    pub ftype: u32,
+    pub fmt: PixFormat,
+    _space: [u8, ..156]
 }
 
 impl Format {
+    #[cfg(target_word_size="64")]
     pub fn new(width: u32, height: u32, fourcc: u32) -> Format {
         Format {
             ftype: BUF_TYPE_VIDEO_CAPTURE,
-            sp: 0,
-            fmt: PixFormat {
-                width: width,
-                height: height,
-                pixelformat: fourcc,
-                field: FIELD_ANY,
-                bytesperline: 0,
-                sizeimage: 0,
-                colorspace: 0,
-                private: 0,
-                flags: 0,
-                // ycbcr_enc: 0,
-                // quantization: 0
-            },
-            space: [0, ..172]
+            _padding: 0,
+            fmt: PixFormat::new(width, height, fourcc),
+            _space: [0, ..156]
+        }
+    }
+
+    #[cfg(target_word_size="32")]
+    pub fn new(width: u32, height: u32, fourcc: u32) -> Format {
+        Format {
+            ftype: BUF_TYPE_VIDEO_CAPTURE,
+            fmt: PixFormat::new(width, height, fourcc),
+            _space: [0, ..156]
         }
     }
 }
@@ -104,8 +111,26 @@ pub struct PixFormat {
     pub colorspace: u32,
     pub private: u32,
     pub flags: u32,
-    // pub ycbcr_enc: u32,
-    // pub quantization: u32
+    pub ycbcr_enc: u32,
+    pub quantization: u32
+}
+
+impl PixFormat {
+    pub fn new(width: u32, height: u32, fourcc: u32) -> PixFormat {
+        PixFormat {
+            width: width,
+            height: height,
+            pixelformat: fourcc,
+            field: FIELD_ANY,
+            bytesperline: 0,
+            sizeimage: 0,
+            colorspace: 0,
+            private: 0,
+            flags: 0,
+            ycbcr_enc: 0,
+            quantization: 0
+        }
+    }
 }
 
 
@@ -175,14 +200,6 @@ impl Buffer {
             reserved: 0
         }
     }
-
-    pub fn offset(&self) -> uint {
-        self.m
-    }
-
-    pub fn userptr(&self) -> uint {
-        self.m
-    }
 }
 
 #[repr(C)]
@@ -225,7 +242,7 @@ impl FmtDesc {
 pub struct StreamParm {
     pub ptype: u32,
     pub parm: CaptureParm,
-    pub space: [u8, ..160]
+    _space: [u8, ..160]
 }
 
 impl StreamParm {
@@ -243,7 +260,7 @@ impl StreamParm {
                 readbuffers: 0,
                 reserved: [0, ..4]
             },
-            space: [0, ..160]
+            _space: [0, ..160]
         }
     }
 }
@@ -334,14 +351,57 @@ pub static FMT_FLAG_EMULATED: u32 = 2;
 pub static FRMIVAL_TYPE_DISCRET: u32 = 1;
 pub static FRMSIZE_TYPE_DISCRETE: u32 = 1;
 pub static MEMORY_MMAP: u32 = 1;
-pub static VIDIOC_DQBUF: uint = 3227014673;
 pub static VIDIOC_ENUM_FMT: uint = 3225441794;
 pub static VIDIOC_ENUM_FRAMEINTERVALS: uint = 3224655435;
 pub static VIDIOC_ENUM_FRAMESIZES: uint = 3224131146;
-pub static VIDIOC_QBUF: uint = 3227014671;
-pub static VIDIOC_QUERYBUF: uint = 3227014665;
 pub static VIDIOC_REQBUFS: uint = 3222558216;
-pub static VIDIOC_S_FMT: uint = 3234878981;
 pub static VIDIOC_S_PARM: uint = 3234616854;
 pub static VIDIOC_STREAMOFF: uint = 1074026003;
 pub static VIDIOC_STREAMON: uint = 1074026002;
+
+#[cfg(target_word_size = "64")]
+pub static VIDIOC_DQBUF: uint = 3227014673;
+#[cfg(target_word_size = "32")]
+pub static VIDIOC_DQBUF: uint = 3225703953;
+
+#[cfg(target_word_size = "64")]
+pub static VIDIOC_QBUF: uint = 3227014671;
+#[cfg(target_word_size = "32")]
+pub static VIDIOC_QBUF: uint = 3225703951;
+
+#[cfg(target_word_size = "64")]
+pub static VIDIOC_QUERYBUF: uint = 3227014665;
+#[cfg(target_word_size = "32")]
+pub static VIDIOC_QUERYBUF: uint = 3225703945;
+
+#[cfg(target_word_size = "64")]
+pub static VIDIOC_S_FMT: uint = 3234878981;
+#[cfg(target_word_size = "32")]
+pub static VIDIOC_S_FMT: uint = 3234616837;
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::mem;
+
+    #[test]
+    fn sizes() {
+        if cfg!(target_word_size = "64") {
+            assert_eq!(mem::size_of::<Format>(), 208);
+        } else {
+            assert_eq!(mem::size_of::<Format>(), 204);
+        }
+
+        if cfg!(target_word_size = "64") {
+            assert_eq!(mem::size_of::<Buffer>(), 88);
+        } else {
+            assert_eq!(mem::size_of::<Buffer>(), 68);
+        }
+
+        assert_eq!(mem::size_of::<StreamParm>(), 204);
+        assert_eq!(mem::size_of::<FmtDesc>(), 64);
+        assert_eq!(mem::size_of::<Frmsizeenum>(), 44);
+        assert_eq!(mem::size_of::<Frmivalenum>(), 52);
+    }
+}

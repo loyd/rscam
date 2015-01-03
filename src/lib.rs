@@ -1,3 +1,4 @@
+#![feature(globs)]
 #![feature(macro_rules)]
 #![feature(slicing_syntax)]
 #![feature(unsafe_destructor)]
@@ -293,7 +294,7 @@ impl<'a> Camera<'a> {
             buffer.index = i;
             try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_QUERYBUF, &mut buffer));
 
-            let region = try!(v4l2::mmap(buffer.length as uint, self.fd, buffer.offset()));
+            let region = try!(v4l2::mmap(buffer.length as uint, self.fd, buffer.m));
 
             self.buffers.push(region);
         }

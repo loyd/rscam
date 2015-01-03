@@ -5,6 +5,7 @@ use libc::{c_void, c_char, c_int, c_ulong, size_t};
 use libc::types::os::arch::posix88::{off_t};
 use libc::types::os::common::posix01::timeval as Timeval;
 use libc::consts::os::posix88::{O_RDWR, PROT_READ, PROT_WRITE, MAP_SHARED};
+use std::c_str::ToCStr;
 
 
 macro_rules! check(
@@ -67,7 +68,7 @@ pub struct Format {
     pub ftype: u32,
     _padding: u32,
     pub fmt: PixFormat,
-    _space: [u8, ..156]
+    _space: [u8; 156]
 }
 
 #[repr(C)]
@@ -75,7 +76,7 @@ pub struct Format {
 pub struct Format {
     pub ftype: u32,
     pub fmt: PixFormat,
-    _space: [u8, ..156]
+    _space: [u8; 156]
 }
 
 impl Format {
@@ -85,7 +86,7 @@ impl Format {
             ftype: BUF_TYPE_VIDEO_CAPTURE,
             _padding: 0,
             fmt: PixFormat::new(width, height, fourcc),
-            _space: [0, ..156]
+            _space: [0; 156]
         }
     }
 
@@ -94,7 +95,7 @@ impl Format {
         Format {
             ftype: BUF_TYPE_VIDEO_CAPTURE,
             fmt: PixFormat::new(width, height, fourcc),
-            _space: [0, ..156]
+            _space: [0; 156]
         }
     }
 }
@@ -139,7 +140,7 @@ pub struct RequestBuffers {
     pub count: u32,
     pub btype: u32,
     pub memory: u32,
-    pub reserved: [u32, ..2]
+    pub reserved: [u32; 2]
 }
 
 impl RequestBuffers {
@@ -148,7 +149,7 @@ impl RequestBuffers {
             count: nbuffers,
             btype: BUF_TYPE_VIDEO_CAPTURE,
             memory: MEMORY_MMAP,
-            reserved: [0, ..2]
+            reserved: [0; 2]
         }
     }
 }
@@ -190,7 +191,7 @@ impl Buffer {
                 seconds: 0,
                 minutes: 0,
                 hours: 0,
-                userbits: [0, ..4]
+                userbits: [0; 4]
             },
             sequence: 0,
             memory: MEMORY_MMAP,
@@ -210,7 +211,7 @@ pub struct TimeCode {
     pub seconds: u8,
     pub minutes: u8,
     pub hours: u8,
-    pub userbits: [u8, ..4]
+    pub userbits: [u8; 4]
 }
 
 
@@ -219,9 +220,9 @@ pub struct FmtDesc {
     pub index: u32,
     pub ftype: u32,
     pub flags: u32,
-    pub description: [u8, ..32],
+    pub description: [u8; 32],
     pub pixelformat: u32,
-    pub reserved: [u32, ..4]
+    pub reserved: [u32; 4]
 }
 
 impl FmtDesc {
@@ -230,9 +231,9 @@ impl FmtDesc {
             index: 0,
             ftype: BUF_TYPE_VIDEO_CAPTURE,
             flags: 0,
-            description: [0, ..32],
+            description: [0; 32],
             pixelformat: 0,
-            reserved: [0, ..4]
+            reserved: [0; 4]
         }
     }
 }
@@ -242,7 +243,7 @@ impl FmtDesc {
 pub struct StreamParm {
     pub ptype: u32,
     pub parm: CaptureParm,
-    _space: [u8, ..160]
+    _space: [u8; 160]
 }
 
 impl StreamParm {
@@ -258,9 +259,9 @@ impl StreamParm {
                 },
                 extendedmode: 0,
                 readbuffers: 0,
-                reserved: [0, ..4]
+                reserved: [0; 4]
             },
-            _space: [0, ..160]
+            _space: [0; 160]
         }
     }
 }
@@ -273,7 +274,7 @@ pub struct CaptureParm {
     pub timeperframe: Fract,
     pub extendedmode: u32,
     pub readbuffers: u32,
-    pub reserved: [u32, ..4]
+    pub reserved: [u32; 4]
 }
 
 #[repr(C)]
@@ -289,7 +290,7 @@ pub struct Frmsizeenum {
     pub pixelformat: u32,
     pub ftype: u32,
     pub discrete: FrmsizeDiscrete,
-    pub reserved: [u32, ..6]
+    pub reserved: [u32; 6]
 }
 
 impl Frmsizeenum {
@@ -302,7 +303,7 @@ impl Frmsizeenum {
                 width: 0,
                 height: 0
             },
-            reserved: [0, ..6]
+            reserved: [0; 6]
         }
     }
 }
@@ -323,7 +324,7 @@ pub struct Frmivalenum {
     pub height: u32,
     pub ftype: u32,
     pub discrete: Fract,
-    pub reserved: [u32, ..6]
+    pub reserved: [u32; 6]
 }
 
 impl Frmivalenum {
@@ -338,7 +339,7 @@ impl Frmivalenum {
                 numerator: 0,
                 denominator: 0
             },
-            reserved: [0, ..6]
+            reserved: [0; 6]
         }
     }
 }

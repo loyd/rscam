@@ -11,7 +11,7 @@ mod v4l2;
 
 
 pub struct FormatInfo {
-    pub format: [u8, ..4],
+    pub format: [u8; 4],
     pub desc: String,
     pub compressed: bool,
     pub emulated: bool,
@@ -19,7 +19,7 @@ pub struct FormatInfo {
 }
 
 impl FormatInfo {
-    fn new(fourcc: u32, desc: &[u8, ..32], flags: u32) -> FormatInfo {
+    fn new(fourcc: u32, desc: &[u8; 32], flags: u32) -> FormatInfo {
         FormatInfo {
             format: [
                 (fourcc >> 0 & 0xff) as u8,
@@ -81,7 +81,7 @@ impl fmt::Show for ModeInfo {
 }
 
 
-#[deriving(Show)]
+#[derive(Show)]
 pub enum Error {
     Io(io::IoError),
     BadResolution,
@@ -96,6 +96,7 @@ impl error::FromError<io::IoError> for Error {
 }
 
 
+#[derive(Copy)]
 pub struct Config {
     pub fps: u32,
     pub width: u32,

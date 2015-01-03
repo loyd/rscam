@@ -16,7 +16,6 @@ macro_rules! check(
         }))
 );
 
-
 #[link(name="v4l2")]
 extern {
     pub fn v4l2_open(file: *const c_char, flags: c_int, arg: c_int) -> c_int;
@@ -26,7 +25,6 @@ extern {
                  flags: c_int, fd: c_int, offset: off_t) -> *mut c_void;
     pub fn v4l2_munmap(start: *mut c_void, length: size_t) -> c_int;
 }
-
 
 pub fn open(file: &str) -> io::IoResult<int> {
     let c_str = file.to_c_str();
@@ -108,7 +106,6 @@ impl Format {
     }
 }
 
-
 #[repr(C)]
 pub struct PixFormat {
     pub width: u32,
@@ -142,7 +139,6 @@ impl PixFormat {
     }
 }
 
-
 #[repr(C)]
 pub struct RequestBuffers {
     pub count: u32,
@@ -161,7 +157,6 @@ impl RequestBuffers {
         }
     }
 }
-
 
 #[repr(C)]
 pub struct Buffer {
@@ -222,7 +217,6 @@ pub struct TimeCode {
     pub userbits: [u8; 4]
 }
 
-
 #[repr(C)]
 pub struct FmtDesc {
     pub index: u32,
@@ -245,7 +239,6 @@ impl FmtDesc {
         }
     }
 }
-
 
 #[repr(C)]
 pub struct StreamParm {
@@ -274,7 +267,6 @@ impl StreamParm {
     }
 }
 
-
 #[repr(C)]
 pub struct CaptureParm {
     pub capability: u32,
@@ -290,7 +282,6 @@ pub struct Fract {
     pub numerator: u32,
     pub denominator: u32
 }
-
 
 #[repr(C)]
 pub struct Frmsizeenum {
@@ -316,13 +307,11 @@ impl Frmsizeenum {
     }
 }
 
-
 #[repr(C)]
 pub struct FrmsizeDiscrete {
     pub width: u32,
     pub height: u32
 }
-
 
 #[repr(C)]
 pub struct Frmivalenum {
@@ -351,7 +340,6 @@ impl Frmivalenum {
         }
     }
 }
-
 
 pub static BUF_TYPE_VIDEO_CAPTURE: u32 = 1;
 pub static FIELD_ANY: u32 = 0;
@@ -387,7 +375,6 @@ pub static VIDIOC_QUERYBUF: uint = 3225703945;
 pub static VIDIOC_S_FMT: uint = 3234878981;
 #[cfg(target_word_size = "32")]
 pub static VIDIOC_S_FMT: uint = 3234616837;
-
 
 #[cfg(test)]
 mod tests {

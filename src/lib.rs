@@ -24,7 +24,6 @@ impl error::FromError<io::IoError> for Error {
     }
 }
 
-
 #[derive(Copy)]
 pub struct Config {
     pub interval: (u32, u32),
@@ -32,7 +31,6 @@ pub struct Config {
     pub height: u32,
     pub format: &'static [u8]
 }
-
 
 pub struct FormatInfo {
     pub format: [u8; 4],
@@ -81,7 +79,6 @@ impl fmt::Show for FormatInfo {
     }
 }
 
-
 pub struct ModeInfo {
     pub width: u32,
     pub height: u32,
@@ -104,7 +101,6 @@ impl fmt::Show for ModeInfo {
     }
 }
 
-
 pub struct Frame<'a> {
     pub data: &'a [u8],
     pub width: u32,
@@ -121,10 +117,11 @@ impl<'a> Drop for Frame<'a> {
     }
 }
 
-
+#[derive(Show, PartialEq)]
 enum State {
     Idle,
-    Streaming
+    Streaming,
+    Aborted
 }
 
 pub struct Camera<'a> {
@@ -177,7 +174,7 @@ impl<'a> Camera<'a> {
                 ival.width = mode.width;
                 ival.height = mode.height;
 
-                // Get interval.
+                // Get intervals.
                 while try!(v4l2::xioctl_valid(self.fd, v4l2::VIDIOC_ENUM_FRAMEINTERVALS,
                                               &mut ival)) {
                     if ival.ftype == v4l2::FRMIVAL_TYPE_DISCRET {
@@ -199,6 +196,8 @@ impl<'a> Camera<'a> {
     }
 
     pub fn start(&mut self, config: &Config) -> Result<(), Error> {
+        assert_eq!(self.state, State::Idle);
+
         self.interval = config.interval;
         self.width = config.width;
         self.height = config.height;
@@ -219,6 +218,8 @@ impl<'a> Camera<'a> {
     }
 
     pub fn shot(&self) -> io::IoResult<Frame> {
+        assert_eq!(self.state, State::Streaming);
+
         let mut buffer = v4l2::Buffer::new();
 
         try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_DQBUF, &mut buffer));
@@ -234,10 +235,12 @@ impl<'a> Camera<'a> {
     }
 
     pub fn stop(&mut self) -> io::IoResult<()> {
+        assert_eq!(self.state, State::Streaming);
+
         try!(self.streamoff());
         try!(self.free_buffers());
 
-        self.state = State::Idle;
+        self.state = State::Aborted;
 
         Ok(())
     }
@@ -321,11 +324,6 @@ impl<'a> Camera<'a> {
     }
 
     fn streamoff(&mut self) -> io::IoResult<()> {
-        assert!(match self.state {
-            State::Streaming => true,
-            _ => false
-        });
-
         let mut typ = v4l2::BUF_TYPE_VIDEO_CAPTURE;
         try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_STREAMOFF, &mut typ));
 
@@ -337,14 +335,13 @@ impl<'a> Camera<'a> {
 impl<'a> Drop for Camera<'a> {
     #[allow(unused_must_use)]
     fn drop(&mut self) {
-        if let State::Streaming = self.state {
+        if self.state == State::Streaming {
             self.stop();
         }
 
         v4l2::close(self.fd);
     }
 }
-
 
 pub fn new(device: &str) -> io::IoResult<Camera> {
     Camera::new(device)

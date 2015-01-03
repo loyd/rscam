@@ -3,3 +3,6 @@
 name = "rscam"
 version = "0.2.0"
 authors = ["Paul Loyd <pavelko95@gmail.com>"]
+description = "Wrapper for v4l2."
+repository = "https://github.com/loyd/rscam"
+license = "MIT"

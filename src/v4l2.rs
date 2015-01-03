@@ -46,6 +46,14 @@ pub fn xioctl<T>(fd: int, request: uint, arg: &mut T) -> io::IoResult<()> {
     Ok(())
 }
 
+pub fn xioctl_valid<T>(fd: int, request: uint, arg: &mut T) -> io::IoResult<bool> {
+    match xioctl(fd, request, arg) {
+        Err(io::IoError { kind: io::InvalidInput, .. }) => Ok(false),
+        Err(err) => Err(err),
+        Ok(_) => Ok(true)
+    }
+}
+
 pub fn mmap<'a>(length: uint, fd: int, offset: uint) -> io::IoResult<&'a mut [u8]> {
     let ptr = unsafe { v4l2_mmap(0 as *mut c_void, length as size_t, PROT_READ|PROT_WRITE,
                                  MAP_SHARED, fd as c_int, offset as off_t) as *mut u8 };

@@ -10,6 +10,30 @@ use std::{io, fmt, str, error};
 mod v4l2;
 
 
+#[derive(Show)]
+pub enum Error {
+    Io(io::IoError),
+    BadResolution,
+    BadFormat,
+    BadInterval
+}
+
+impl error::FromError<io::IoError> for Error {
+    fn from_error(err: io::IoError) -> Error {
+        Error::Io(err)
+    }
+}
+
+
+#[derive(Copy)]
+pub struct Config {
+    pub interval: (u32, u32),
+    pub width: u32,
+    pub height: u32,
+    pub format: &'static [u8]
+}
+
+
 pub struct FormatInfo {
     pub format: [u8; 4],
     pub desc: String,
@@ -81,30 +105,6 @@ impl fmt::Show for ModeInfo {
 }
 
 
-#[derive(Show)]
-pub enum Error {
-    Io(io::IoError),
-    BadResolution,
-    BadFormat,
-    BadInterval
-}
-
-impl error::FromError<io::IoError> for Error {
-    fn from_error(err: io::IoError) -> Error {
-        Error::Io(err)
-    }
-}
-
-
-#[derive(Copy)]
-pub struct Config {
-    pub interval: (u32, u32),
-    pub width: u32,
-    pub height: u32,
-    pub format: &'static [u8]
-}
-
-
 pub struct Frame<'a> {
     pub data: &'a [u8],
     pub width: u32,
@@ -150,14 +150,14 @@ impl<'a> Camera<'a> {
         })
     }
 
-    pub fn formats(&self) -> Vec<FormatInfo> {
+    pub fn formats(&self) -> io::IoResult<Vec<FormatInfo>> {
         let mut res = vec![];
         let mut fmt = v4l2::FmtDesc::new();
         let mut size = v4l2::Frmsizeenum::new();
         let mut ival = v4l2::Frmivalenum::new();
 
         // Get formats.
-        while v4l2::xioctl(self.fd, v4l2::VIDIOC_ENUM_FMT, &mut fmt).is_ok() {
+        while try!(v4l2::xioctl_valid(self.fd, v4l2::VIDIOC_ENUM_FMT, &mut fmt)) {
             let mut format = FormatInfo::new(fmt.pixelformat, &fmt.description, fmt.flags);
 
             size.index = 0;
@@ -165,7 +165,7 @@ impl<'a> Camera<'a> {
             ival.pixelformat = fmt.pixelformat;
 
             // Get modes.
-            while v4l2::xioctl(self.fd, v4l2::VIDIOC_ENUM_FRAMESIZES, &mut size).is_ok() {
+            while try!(v4l2::xioctl_valid(self.fd, v4l2::VIDIOC_ENUM_FRAMESIZES, &mut size)) {
                 if size.ftype != v4l2::FRMSIZE_TYPE_DISCRETE {
                     size.index += 1;
                     continue;
@@ -178,7 +178,8 @@ impl<'a> Camera<'a> {
                 ival.height = mode.height;
 
                 // Get interval.
-                while v4l2::xioctl(self.fd, v4l2::VIDIOC_ENUM_FRAMEINTERVALS, &mut ival).is_ok() {
+                while try!(v4l2::xioctl_valid(self.fd, v4l2::VIDIOC_ENUM_FRAMEINTERVALS,
+                                              &mut ival)) {
                     if ival.ftype == v4l2::FRMIVAL_TYPE_DISCRET {
                         mode.intervals.push((ival.discrete.numerator, ival.discrete.denominator));
                     }
@@ -194,7 +195,7 @@ impl<'a> Camera<'a> {
             fmt.index += 1;
         }
 
-        res
+        Ok(res)
     }
 
     pub fn start(&mut self, config: &Config) -> Result<(), Error> {

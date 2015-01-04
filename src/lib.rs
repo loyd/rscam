@@ -70,7 +70,7 @@ impl FormatInfo {
 
     fn fourcc(val: &[u8]) -> u32 {
         assert_eq!(val.len(), 4);
-        (val[0] as u32) | (val[1] as u32 << 8) | (val[2] as u32 << 16) | (val[3] as u32 << 24)
+        val[0] as u32 | (val[1] as u32) << 8 | (val[2] as u32) << 16 | (val[3] as u32) << 24
     }
 }
 

@@ -1,8 +1,11 @@
 [package]
 
 name = "rscam"
-version = "0.2.0"
-authors = ["Paul Loyd <pavelko95@gmail.com>"]
+version = "0.2.5"
 description = "Wrapper for v4l2."
+keywords = ["v4l2", "video", "camera", "capture"]
+authors = ["Paul Loyd <pavelko95@gmail.com>"]
 repository = "https://github.com/loyd/rscam"
+documentation = "http://loyd.github.io/rscam"
 license = "MIT"
+readme = "README.md"

@@ -13,8 +13,11 @@ mod v4l2;
 #[derive(Show)]
 pub enum Error {
     Io(io::IoError),
+    /// Unsupported resolution (width and/or height).
     BadResolution,
+    /// Unsupported format of pixel.
     BadFormat,
+    /// Unsupported frame interval.
     BadInterval
 }
 
@@ -25,18 +28,22 @@ impl error::FromError<io::IoError> for Error {
 }
 
 #[derive(Copy)]
-pub struct Config {
+pub struct Config<'a> {
+    /// The mix of numerator and denominator. v4l2 uses frame intervals instead of frame rates.
     pub interval: (u32, u32),
     pub width: u32,
     pub height: u32,
-    pub format: &'static [u8]
+    /// Note that case matters.
+    pub format: &'a [u8]
 }
 
 pub struct FormatInfo {
     pub format: [u8; 4],
     pub desc: String,
     pub compressed: bool,
+    /// Whether it's transcoded from a different input format.
     pub emulated: bool,
+    /// Resolutions and intervals for the format.
     pub modes: Vec<ModeInfo>
 }
 
@@ -131,11 +138,18 @@ pub struct Camera<'a> {
     width: u32,
     height: u32,
     fourcc: u32,
-    buffers: Vec<&'a mut [u8]>
+    buffers: Vec<&'a mut [u8]>,
+    nbuffers: u32
 }
 
 impl<'a> Camera<'a> {
+    /// Construct with the default number of buffers.
     pub fn new(device: &str) -> io::IoResult<Camera> {
+        Camera::with_nbuffers(device, 4)
+    }
+
+    /// Construct with the specified number of buffers.
+    pub fn with_nbuffers(device: &str, nbuffers: u32) -> io::IoResult<Camera> {
         Ok(Camera {
             state: State::Idle,
             fd: try!(v4l2::open(device)),
@@ -143,10 +157,12 @@ impl<'a> Camera<'a> {
             width: 0,
             height: 0,
             fourcc: 0,
-            buffers: vec![]
+            buffers: Vec::with_capacity(nbuffers as uint),
+            nbuffers: nbuffers
         })
     }
 
+    /// Get detailed info about the available formats.
     pub fn formats(&self) -> io::IoResult<Vec<FormatInfo>> {
         let mut res = vec![];
         let mut fmt = v4l2::FmtDesc::new();
@@ -195,6 +211,7 @@ impl<'a> Camera<'a> {
         Ok(res)
     }
 
+    /// Start streaming.
     pub fn start(&mut self, config: &Config) -> Result<(), Error> {
         assert_eq!(self.state, State::Idle);
 
@@ -217,6 +234,10 @@ impl<'a> Camera<'a> {
         Ok(())
     }
 
+    /**
+     * Blocking request of frame.
+     * It dequeues buffer from a driver, which will be enqueueed after destructing `Frame`.
+     */
     pub fn shot(&self) -> io::IoResult<Frame> {
         assert_eq!(self.state, State::Streaming);
 
@@ -234,6 +255,7 @@ impl<'a> Camera<'a> {
         })
     }
 
+    /// Stop streaming.
     pub fn stop(&mut self) -> io::IoResult<()> {
         assert_eq!(self.state, State::Streaming);
 
@@ -277,13 +299,11 @@ impl<'a> Camera<'a> {
     }
 
     fn alloc_buffers(&mut self) -> io::IoResult<()> {
-        let nbuffers = 4;
-
-        let mut req = v4l2::RequestBuffers::new(nbuffers);
+        let mut req = v4l2::RequestBuffers::new(self.nbuffers);
 
         try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_REQBUFS, &mut req));
 
-        for i in range(0, nbuffers) {
+        for i in range(0, self.nbuffers) {
             let mut buffer = v4l2::Buffer::new();
             buffer.index = i;
             try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_QUERYBUF, &mut buffer));
@@ -343,6 +363,7 @@ impl<'a> Drop for Camera<'a> {
     }
 }
 
+/// Alias for `Camera::new()`.
 pub fn new(device: &str) -> io::IoResult<Camera> {
     Camera::new(device)
 }

@@ -1,7 +1,7 @@
 use std::{io, os, raw, mem};
 
 // C types and constants.
-use libc::{c_void, c_char, c_int, c_ulong, size_t};
+use libc::{c_void, c_char, c_int, c_ulong, size_t, EINTR};
 use libc::types::os::arch::posix88::{off_t};
 use libc::types::os::common::posix01::timeval as Timeval;
 use libc::consts::os::posix88::{O_RDWR, PROT_READ, PROT_WRITE, MAP_SHARED};
@@ -40,7 +40,20 @@ pub fn close(fd: int) -> io::IoResult<()> {
 
 pub fn xioctl<T>(fd: int, request: uint, arg: &mut T) -> io::IoResult<()> {
     let argp: *mut T = arg;
-    check!(unsafe { v4l2_ioctl(fd as c_int, request as c_ulong, argp as *mut c_void) != -1 });
+
+    check!(unsafe {
+        let mut ok;
+
+        loop {
+            ok = v4l2_ioctl(fd as c_int, request as c_ulong, argp as *mut c_void) != -1;
+            if ok || os::errno() != EINTR as uint {
+                break;
+            }
+        }
+
+        ok
+    });
+
     Ok(())
 }
 

@@ -14,7 +14,7 @@ fn main() {
     }).unwrap();
 
     for i in iter::count(1u, 1) {
-        let frame = camera.shot().unwrap();
+        let frame = camera.capture().unwrap();
         println!("Frame #{} of length {}", i, frame.data.len());
     }
 }

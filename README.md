@@ -17,7 +17,7 @@ camera.start(&rscam::Config {
 }).unwrap();
 
 for i in range(0u, 10) {
-    let frame = camera.shot().unwrap();
+    let frame = camera.capture().unwrap();
     let mut file = fs::File::create(&Path::new(format!("frame-{}.jpg", i)));
     file.write(frame.data).unwrap();
 }

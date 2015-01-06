@@ -1,5 +1,3 @@
-#![feature(associated_types)]
-#![feature(globs)]
 #![feature(macro_rules)]
 #![feature(slicing_syntax)]
 #![feature(unsafe_destructor)]
@@ -13,6 +11,7 @@ mod v4l2;
 
 #[derive(Show)]
 pub enum Error {
+    /// I/O error when using the camera.
     Io(io::IoError),
     /// Unsupported resolution (width and/or height).
     BadResolution,
@@ -41,8 +40,8 @@ pub struct Config<'a> {
      */
     pub resolution: (u32, u32),
     /**
-     * Note that case matters.
-     * Default is `YUYV`.
+     * FourCC of format (e.g. `b"RGB3"`). Note that case matters.
+     * Default is `b"YUYV"`.
      */
     pub format: &'a [u8],
     /**
@@ -64,8 +63,11 @@ impl<'a> default::Default for Config<'a> {
 }
 
 pub struct FormatInfo {
+    /// FourCC of format (e.g. `"H264"`).
     pub format: [u8; 4],
-    pub desc: String,
+    /// Information about the format.
+    pub description: String,
+    /// Raw or compressed.
     pub compressed: bool,
     /// Whether it's transcoded from a different input format.
     pub emulated: bool,
@@ -74,7 +76,7 @@ pub struct FormatInfo {
 }
 
 impl FormatInfo {
-    fn new(fourcc: u32, desc: &[u8; 32], flags: u32) -> FormatInfo {
+    fn new(fourcc: u32, desc: &[u8], flags: u32) -> FormatInfo {
         FormatInfo {
             format: [
                 (fourcc >> 0 & 0xff) as u8,
@@ -83,7 +85,7 @@ impl FormatInfo {
                 (fourcc >> 24 & 0xff) as u8
             ],
 
-            desc: unsafe {
+            description: unsafe {
                 String::from_raw_buf(desc.as_ptr())
             },
 
@@ -94,16 +96,15 @@ impl FormatInfo {
         }
     }
 
-    fn fourcc(val: &[u8]) -> u32 {
-        assert_eq!(val.len(), 4);
-        val[0] as u32 | (val[1] as u32) << 8 | (val[2] as u32) << 16 | (val[3] as u32) << 24
+    fn fourcc(fmt: &[u8]) -> u32 {
+        fmt[0] as u32 | (fmt[1] as u32) << 8 | (fmt[2] as u32) << 16 | (fmt[3] as u32) << 24
     }
 }
 
 impl fmt::Show for FormatInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} ({}{})", str::from_utf8(self.format.as_slice()).unwrap(),
-            self.desc, match (self.compressed, self.emulated) {
+            self.description, match (self.compressed, self.emulated) {
                 (true, true) => ", compressed, emulated",
                 (true, false) => ", compressed",
                 (false, true) => ", emulated",
@@ -133,7 +134,12 @@ impl fmt::Show for ModeInfo {
 }
 
 pub struct Frame<'a> {
+    /// Slice of one of the buffers.
     pub data: &'a [u8],
+    /// Width and height of the frame.
+    pub resolution: (u32, u32),
+    /// FourCC of the format.
+    pub format: [u8; 4],
     fd: int,
     buffer: v4l2::Buffer
 }
@@ -156,6 +162,8 @@ enum State {
 pub struct Camera<'a> {
     fd: int,
     state: State,
+    resolution: (u32, u32),
+    format: [u8; 4],
     buffers: Vec<&'a mut [u8]>
 }
 
@@ -164,6 +172,8 @@ impl<'a> Camera<'a> {
         Ok(Camera {
             fd: try!(v4l2::open(device)),
             state: State::Idle,
+            resolution: (0, 0),
+            format: [0; 4],
             buffers: vec![]
         })
     }
@@ -218,12 +228,17 @@ impl<'a> Camera<'a> {
     }
 
     /// Start streaming.
+
+    /**
+     * Start streaming.
+     *
+     * # Panics
+     * if recalled or called after `stop()`.
+     */
     pub fn start(&mut self, config: &Config) -> Result<(), Error> {
         assert_eq!(self.state, State::Idle);
 
-        let fourcc = FormatInfo::fourcc(config.format);
-
-        try!(self.tune_format(config.resolution, fourcc));
+        try!(self.tune_format(config.resolution, config.format));
         try!(self.tune_stream(config.interval));
         try!(self.alloc_buffers(config.nbuffers));
 
@@ -231,6 +246,9 @@ impl<'a> Camera<'a> {
             let _ = self.free_buffers();
             return Err(Error::Io(err));
         }
+
+        self.resolution = config.resolution;
+        self.format = [config.format[0], config.format[1], config.format[2], config.format[3]];
 
         self.state = State::Streaming;
 
@@ -240,31 +258,33 @@ impl<'a> Camera<'a> {
     /**
      * Blocking request of frame.
      * It dequeues buffer from a driver, which will be enqueueed after destructing `Frame`.
+     *
+     * # Panics
+     * If called w/o streaming.
      */
-    pub fn shot(&self) -> io::IoResult<Frame> {
+    pub fn capture(&self) -> io::IoResult<Frame> {
         assert_eq!(self.state, State::Streaming);
 
-        let mut buffer = v4l2::Buffer::new();
+        let mut buf = v4l2::Buffer::new();
 
-        try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_DQBUF, &mut buffer));
-        assert!(buffer.index < self.buffers.len() as u32);
+        try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_DQBUF, &mut buf));
+        assert!(buf.index < self.buffers.len() as u32);
 
         Ok(Frame {
-            data: self.buffers[buffer.index as uint][0..buffer.bytesused as uint],
+            data: self.buffers[buf.index as uint][0..buf.bytesused as uint],
+            resolution: self.resolution,
+            format: self.format,
             fd: self.fd,
-            buffer: buffer
+            buffer: buf
         })
-
-        // let f = Frame {
-        //     data: self.buffers[buffer.index as uint][0..buffer.bytesused as uint],
-        //     fd: self.fd,
-        //     buffer: buffer
-        // };
-
-        // Ok(f.data)
     }
 
-    /// Stop streaming.
+    /**
+     * Stop streaming.
+     *
+     * # Panics
+     * If called w/o streaming.
+     */
     pub fn stop(&mut self) -> io::IoResult<()> {
         assert_eq!(self.state, State::Streaming);
 
@@ -276,16 +296,21 @@ impl<'a> Camera<'a> {
         Ok(())
     }
 
-    fn tune_format(&self, resolution: (u32, u32), fourcc: u32) -> Result<(), Error> {
-        let mut format = v4l2::Format::new(resolution, fourcc);
+    fn tune_format(&self, resolution: (u32, u32), format: &[u8]) -> Result<(), Error> {
+        if format.len() != 4 {
+            return Err(Error::BadFormat);
+        }
 
-        try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_S_FMT, &mut format));
+        let fourcc = FormatInfo::fourcc(format);
+        let mut fmt = v4l2::Format::new(resolution, fourcc);
 
-        if (format.fmt.width, format.fmt.height) != resolution {
+        try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_S_FMT, &mut fmt));
+
+        if (fmt.fmt.width, fmt.fmt.height) != resolution {
             return Err(Error::BadResolution);
         }
 
-        if fourcc != format.fmt.pixelformat {
+        if fourcc != fmt.fmt.pixelformat {
             return Err(Error::BadFormat);
         }
 
@@ -311,11 +336,11 @@ impl<'a> Camera<'a> {
         try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_REQBUFS, &mut req));
 
         for i in range(0, nbuffers) {
-            let mut buffer = v4l2::Buffer::new();
-            buffer.index = i;
-            try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_QUERYBUF, &mut buffer));
+            let mut buf = v4l2::Buffer::new();
+            buf.index = i;
+            try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_QUERYBUF, &mut buf));
 
-            let region = try!(v4l2::mmap(buffer.length as uint, self.fd, buffer.m));
+            let region = try!(v4l2::mmap(buf.length as uint, self.fd, buf.m));
 
             self.buffers.push(region);
         }
@@ -338,10 +363,10 @@ impl<'a> Camera<'a> {
 
     fn streamon(&self) -> io::IoResult<()> {
         for i in range(0, self.buffers.len()) {
-            let mut buffer = v4l2::Buffer::new();
-            buffer.index = i as u32;
+            let mut buf = v4l2::Buffer::new();
+            buf.index = i as u32;
 
-            try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_QBUF, &mut buffer));
+            try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_QBUF, &mut buf));
         }
 
         let mut typ = v4l2::BUF_TYPE_VIDEO_CAPTURE;

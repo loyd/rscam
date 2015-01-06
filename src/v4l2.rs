@@ -5,16 +5,9 @@ use libc::{c_void, c_char, c_int, c_ulong, size_t, EINTR};
 use libc::types::os::arch::posix88::{off_t};
 use libc::types::os::common::posix01::timeval as Timeval;
 use libc::consts::os::posix88::{O_RDWR, PROT_READ, PROT_WRITE, MAP_SHARED};
+
 use std::c_str::ToCStr;
 
-
-macro_rules! check(
-    ($cond:expr) =>
-        (try!(match !$cond && os::errno() > 0 {
-            true  => Err(io::IoError::last_error()),
-            false => Ok(())
-        }))
-);
 
 #[link(name="v4l2")]
 extern {
@@ -25,6 +18,14 @@ extern {
                  flags: c_int, fd: c_int, offset: off_t) -> *mut c_void;
     pub fn v4l2_munmap(start: *mut c_void, length: size_t) -> c_int;
 }
+
+macro_rules! check(
+    ($cond:expr) =>
+        (try!(match !$cond && os::errno() > 0 {
+            true  => Err(io::IoError::last_error()),
+            false => Ok(())
+        }))
+);
 
 pub fn open(file: &str) -> io::IoResult<int> {
     let c_str = file.to_c_str();
@@ -82,20 +83,12 @@ pub fn munmap(region: &mut [u8]) -> io::IoResult<()> {
 }
 
 #[repr(C)]
-#[cfg(target_word_size="64")]
 pub struct Format {
     pub ftype: u32,
-    _padding: u32,
+    #[cfg(target_word_size="64")]
+    padding: u32,
     pub fmt: PixFormat,
-    _space: [u8; 156]
-}
-
-#[repr(C)]
-#[cfg(target_word_size="32")]
-pub struct Format {
-    pub ftype: u32,
-    pub fmt: PixFormat,
-    _space: [u8; 156]
+    space: [u8; 156]
 }
 
 impl Format {
@@ -103,9 +96,9 @@ impl Format {
     pub fn new(resolution: (u32, u32), fourcc: u32) -> Format {
         Format {
             ftype: BUF_TYPE_VIDEO_CAPTURE,
-            _padding: 0,
+            padding: 0,
             fmt: PixFormat::new(resolution, fourcc),
-            _space: [0; 156]
+            space: [0; 156]
         }
     }
 
@@ -114,7 +107,7 @@ impl Format {
         Format {
             ftype: BUF_TYPE_VIDEO_CAPTURE,
             fmt: PixFormat::new(resolution, fourcc),
-            _space: [0; 156]
+            space: [0; 156]
         }
     }
 }
@@ -157,7 +150,7 @@ pub struct RequestBuffers {
     pub count: u32,
     pub btype: u32,
     pub memory: u32,
-    pub reserved: [u32; 2]
+    reserved: [u32; 2]
 }
 
 impl RequestBuffers {
@@ -185,7 +178,7 @@ pub struct Buffer {
     pub m: uint,   // offset (__u32) or userptr (ulong)
     pub length: u32,
     pub input: u32,
-    pub reserved: u32
+    reserved: u32
 }
 
 impl Buffer {
@@ -237,7 +230,7 @@ pub struct FmtDesc {
     pub flags: u32,
     pub description: [u8; 32],
     pub pixelformat: u32,
-    pub reserved: [u32; 4]
+    reserved: [u32; 4]
 }
 
 impl FmtDesc {
@@ -257,7 +250,7 @@ impl FmtDesc {
 pub struct StreamParm {
     pub ptype: u32,
     pub parm: CaptureParm,
-    _space: [u8; 160]
+    space: [u8; 160]
 }
 
 impl StreamParm {
@@ -275,7 +268,7 @@ impl StreamParm {
                 readbuffers: 0,
                 reserved: [0; 4]
             },
-            _space: [0; 160]
+            space: [0; 160]
         }
     }
 }
@@ -287,7 +280,7 @@ pub struct CaptureParm {
     pub timeperframe: Fract,
     pub extendedmode: u32,
     pub readbuffers: u32,
-    pub reserved: [u32; 4]
+    reserved: [u32; 4]
 }
 
 #[repr(C)]
@@ -302,7 +295,7 @@ pub struct Frmsizeenum {
     pub pixelformat: u32,
     pub ftype: u32,
     pub discrete: FrmsizeDiscrete,
-    pub reserved: [u32; 6]
+    reserved: [u32; 6]
 }
 
 impl Frmsizeenum {
@@ -334,7 +327,7 @@ pub struct Frmivalenum {
     pub height: u32,
     pub ftype: u32,
     pub discrete: Fract,
-    pub reserved: [u32; 6]
+    reserved: [u32; 6]
 }
 
 impl Frmivalenum {
@@ -361,6 +354,8 @@ pub static FMT_FLAG_EMULATED: u32 = 2;
 pub static FRMIVAL_TYPE_DISCRET: u32 = 1;
 pub static FRMSIZE_TYPE_DISCRETE: u32 = 1;
 pub static MEMORY_MMAP: u32 = 1;
+
+// IOCTL codes.
 pub static VIDIOC_ENUM_FMT: uint = 3225441794;
 pub static VIDIOC_ENUM_FRAMEINTERVALS: uint = 3224655435;
 pub static VIDIOC_ENUM_FRAMESIZES: uint = 3224131146;
@@ -389,28 +384,22 @@ pub static VIDIOC_S_FMT: uint = 3234878981;
 #[cfg(target_word_size = "32")]
 pub static VIDIOC_S_FMT: uint = 3234616837;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::mem;
-
-    #[test]
-    fn sizes() {
-        if cfg!(target_word_size = "64") {
-            assert_eq!(mem::size_of::<Format>(), 208);
-        } else {
-            assert_eq!(mem::size_of::<Format>(), 204);
-        }
-
-        if cfg!(target_word_size = "64") {
-            assert_eq!(mem::size_of::<Buffer>(), 88);
-        } else {
-            assert_eq!(mem::size_of::<Buffer>(), 68);
-        }
-
-        assert_eq!(mem::size_of::<StreamParm>(), 204);
-        assert_eq!(mem::size_of::<FmtDesc>(), 64);
-        assert_eq!(mem::size_of::<Frmsizeenum>(), 44);
-        assert_eq!(mem::size_of::<Frmivalenum>(), 52);
+#[test]
+fn test_sizes() {
+    if cfg!(target_word_size = "64") {
+        assert_eq!(mem::size_of::<Format>(), 208);
+    } else {
+        assert_eq!(mem::size_of::<Format>(), 204);
     }
+
+    if cfg!(target_word_size = "64") {
+        assert_eq!(mem::size_of::<Buffer>(), 88);
+    } else {
+        assert_eq!(mem::size_of::<Buffer>(), 68);
+    }
+
+    assert_eq!(mem::size_of::<StreamParm>(), 204);
+    assert_eq!(mem::size_of::<FmtDesc>(), 64);
+    assert_eq!(mem::size_of::<Frmsizeenum>(), 44);
+    assert_eq!(mem::size_of::<Frmivalenum>(), 52);
 }

@@ -18,7 +18,7 @@ fn main() {
     }).unwrap();
 
     for i in range(0u, 10) {
-        let frame = camera.shot().unwrap();
+        let frame = camera.capture().unwrap();
 
         println!("Frame of length {}", frame.data.len());
 

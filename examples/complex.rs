@@ -1,6 +1,7 @@
 extern crate rscam;
 
 use std::io::fs;
+use std::default::Default;
 
 fn main() {
     let mut camera = rscam::new("/dev/video0").unwrap();
@@ -11,9 +12,9 @@ fn main() {
 
     camera.start(&rscam::Config {
         interval: (1, 10),
-        width: 1280,
-        height: 720,
-        format: b"MJPG"
+        resolution: (1280, 720),
+        format: b"MJPG",
+        ..Default::default()
     }).unwrap();
 
     for i in range(0u, 10) {

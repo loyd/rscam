@@ -100,20 +100,20 @@ pub struct Format {
 
 impl Format {
     #[cfg(target_word_size="64")]
-    pub fn new(width: u32, height: u32, fourcc: u32) -> Format {
+    pub fn new(resolution: (u32, u32), fourcc: u32) -> Format {
         Format {
             ftype: BUF_TYPE_VIDEO_CAPTURE,
             _padding: 0,
-            fmt: PixFormat::new(width, height, fourcc),
+            fmt: PixFormat::new(resolution, fourcc),
             _space: [0; 156]
         }
     }
 
     #[cfg(target_word_size="32")]
-    pub fn new(width: u32, height: u32, fourcc: u32) -> Format {
+    pub fn new(resolution: (u32, u32), fourcc: u32) -> Format {
         Format {
             ftype: BUF_TYPE_VIDEO_CAPTURE,
-            fmt: PixFormat::new(width, height, fourcc),
+            fmt: PixFormat::new(resolution, fourcc),
             _space: [0; 156]
         }
     }
@@ -135,10 +135,10 @@ pub struct PixFormat {
 }
 
 impl PixFormat {
-    pub fn new(width: u32, height: u32, fourcc: u32) -> PixFormat {
+    pub fn new(resolution: (u32, u32), fourcc: u32) -> PixFormat {
         PixFormat {
-            width: width,
-            height: height,
+            width: resolution.0,
+            height: resolution.1,
             pixelformat: fourcc,
             field: FIELD_ANY,
             bytesperline: 0,

@@ -10,10 +10,10 @@ Rust wrapper for v4l2.
 let mut camera = rscam::new("/dev/video0").unwrap();
 
 camera.start(&rscam::Config {
-    interval: (1, 30),  // 30 fps.
-    width: 1280,
-    height: 720,
-    format: b"MJPG"
+    interval: (1, 30),      // 30 fps.
+    resolution: (1280, 720),
+    format: b"MJPG",
+    ..Default::default()
 }).unwrap();
 
 for i in range(0u, 10) {
@@ -26,4 +26,5 @@ for i in range(0u, 10) {
 TODO
 ----
 * `userptr` and `read` methods.
-* test on raspberry pi.
+* Control API.
+* Checking raspberry pi and x32.

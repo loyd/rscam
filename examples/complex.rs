@@ -7,7 +7,7 @@ fn main() {
     let mut camera = rscam::new("/dev/video0").unwrap();
 
     for format in camera.formats().unwrap().iter() {
-        println!("{}", format);
+        println!("{:?}", format);
     }
 
     camera.start(&rscam::Config {

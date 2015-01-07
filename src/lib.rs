@@ -1,4 +1,3 @@
-#![feature(macro_rules)]
 #![feature(slicing_syntax)]
 #![feature(unsafe_destructor)]
 
@@ -108,9 +107,10 @@ impl FormatInfo {
                 (fourcc >> 24 & 0xff) as u8
             ],
 
-            description: unsafe {
-                String::from_raw_buf(desc.as_ptr())
-            },
+            description: String::from_utf8_lossy(match desc.position_elem(&0) {
+                Some(x) => desc.slice_to(x),
+                None    => desc
+            }).into_owned(),
 
             compressed: flags & v4l2::FMT_FLAG_COMPRESSED != 0,
             emulated: flags & v4l2::FMT_FLAG_EMULATED != 0,
@@ -292,7 +292,7 @@ impl<'a> Camera<'a> {
         assert!(buf.index < self.buffers.len() as u32);
 
         Ok(Frame {
-            data: self.buffers[buf.index as uint][0..buf.bytesused as uint],
+            data: self.buffers[buf.index as usize].slice_to(buf.bytesused as usize),
             resolution: self.resolution,
             format: self.format,
             fd: self.fd,
@@ -365,7 +365,7 @@ impl<'a> Camera<'a> {
             buf.index = i;
             try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_QUERYBUF, &mut buf));
 
-            let region = try!(v4l2::mmap(buf.length as uint, self.fd, buf.m));
+            let region = try!(v4l2::mmap(buf.length as usize, self.fd, buf.m));
 
             self.buffers.push(region);
         }

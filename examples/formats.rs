@@ -4,13 +4,13 @@ fn main() {
     let camera = rscam::new("/dev/video0").unwrap();
 
     for format in camera.formats().unwrap().iter() {
-        println!("{}", format);
+        println!("{:?}", format);
 
         for mode in format.modes.iter() {
-            print!("    {}:", mode);
+            print!("    {:?}:", mode);
 
             for interval in mode.intervals.iter() {
-                print!(" {}", interval);
+                print!(" {:?}", interval);
             }
 
             println!("");

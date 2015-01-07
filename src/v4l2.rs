@@ -6,7 +6,7 @@ use libc::types::os::arch::posix88::{off_t};
 use libc::types::os::common::posix01::timeval as Timeval;
 use libc::consts::os::posix88::{O_RDWR, PROT_READ, PROT_WRITE, MAP_SHARED};
 
-use std::c_str::ToCStr;
+use std::ffi::CString;
 
 
 #[link(name="v4l2")]
@@ -27,19 +27,19 @@ macro_rules! check(
         }))
 );
 
-pub fn open(file: &str) -> io::IoResult<int> {
-    let c_str = file.to_c_str();
-    let fd = unsafe { v4l2_open(c_str.as_ptr(), O_RDWR, 0) as int };
+pub fn open(file: &str) -> io::IoResult<isize> {
+    let c_str = CString::from_slice(file.as_bytes());
+    let fd = unsafe { v4l2_open(c_str.as_ptr(), O_RDWR, 0) as isize };
     check!(fd != -1);
     Ok(fd)
 }
 
-pub fn close(fd: int) -> io::IoResult<()> {
+pub fn close(fd: isize) -> io::IoResult<()> {
     check!(unsafe { v4l2_close(fd as c_int) != -1 });
     Ok(())
 }
 
-pub fn xioctl<T>(fd: int, request: uint, arg: &mut T) -> io::IoResult<()> {
+pub fn xioctl<T>(fd: isize, request: usize, arg: &mut T) -> io::IoResult<()> {
     let argp: *mut T = arg;
 
     check!(unsafe {
@@ -47,7 +47,7 @@ pub fn xioctl<T>(fd: int, request: uint, arg: &mut T) -> io::IoResult<()> {
 
         loop {
             ok = v4l2_ioctl(fd as c_int, request as c_ulong, argp as *mut c_void) != -1;
-            if ok || os::errno() != EINTR as uint {
+            if ok || os::errno() != EINTR as usize {
                 break;
             }
         }
@@ -58,7 +58,7 @@ pub fn xioctl<T>(fd: int, request: uint, arg: &mut T) -> io::IoResult<()> {
     Ok(())
 }
 
-pub fn xioctl_valid<T>(fd: int, request: uint, arg: &mut T) -> io::IoResult<bool> {
+pub fn xioctl_valid<T>(fd: isize, request: usize, arg: &mut T) -> io::IoResult<bool> {
     match xioctl(fd, request, arg) {
         Err(io::IoError { kind: io::InvalidInput, .. }) => Ok(false),
         Err(err) => Err(err),
@@ -66,7 +66,7 @@ pub fn xioctl_valid<T>(fd: int, request: uint, arg: &mut T) -> io::IoResult<bool
     }
 }
 
-pub fn mmap<'a>(length: uint, fd: int, offset: uint) -> io::IoResult<&'a mut [u8]> {
+pub fn mmap<'a>(length: usize, fd: isize, offset: usize) -> io::IoResult<&'a mut [u8]> {
     let ptr = unsafe { v4l2_mmap(0 as *mut c_void, length as size_t, PROT_READ|PROT_WRITE,
                                  MAP_SHARED, fd as c_int, offset as off_t) as *mut u8 };
 
@@ -175,7 +175,7 @@ pub struct Buffer {
     pub timecode: TimeCode,
     pub sequence: u32,
     pub memory: u32,
-    pub m: uint,   // offset (__u32) or userptr (ulong)
+    pub m: usize,   // offset (__u32) or userptr (ulong)
     pub length: u32,
     pub input: u32,
     reserved: u32
@@ -355,33 +355,33 @@ pub static FRMSIZE_TYPE_DISCRETE: u32 = 1;
 pub static MEMORY_MMAP: u32 = 1;
 
 // IOCTL codes.
-pub static VIDIOC_ENUM_FMT: uint = 3225441794;
-pub static VIDIOC_ENUM_FRAMEINTERVALS: uint = 3224655435;
-pub static VIDIOC_ENUM_FRAMESIZES: uint = 3224131146;
-pub static VIDIOC_REQBUFS: uint = 3222558216;
-pub static VIDIOC_S_PARM: uint = 3234616854;
-pub static VIDIOC_STREAMOFF: uint = 1074026003;
-pub static VIDIOC_STREAMON: uint = 1074026002;
+pub static VIDIOC_ENUM_FMT: usize = 3225441794;
+pub static VIDIOC_ENUM_FRAMEINTERVALS: usize = 3224655435;
+pub static VIDIOC_ENUM_FRAMESIZES: usize = 3224131146;
+pub static VIDIOC_REQBUFS: usize = 3222558216;
+pub static VIDIOC_S_PARM: usize = 3234616854;
+pub static VIDIOC_STREAMOFF: usize = 1074026003;
+pub static VIDIOC_STREAMON: usize = 1074026002;
 
 #[cfg(target_word_size = "64")]
-pub static VIDIOC_DQBUF: uint = 3227014673;
+pub static VIDIOC_DQBUF: usize = 3227014673;
 #[cfg(target_word_size = "32")]
-pub static VIDIOC_DQBUF: uint = 3225703953;
+pub static VIDIOC_DQBUF: usize = 3225703953;
 
 #[cfg(target_word_size = "64")]
-pub static VIDIOC_QBUF: uint = 3227014671;
+pub static VIDIOC_QBUF: usize = 3227014671;
 #[cfg(target_word_size = "32")]
-pub static VIDIOC_QBUF: uint = 3225703951;
+pub static VIDIOC_QBUF: usize = 3225703951;
 
 #[cfg(target_word_size = "64")]
-pub static VIDIOC_QUERYBUF: uint = 3227014665;
+pub static VIDIOC_QUERYBUF: usize = 3227014665;
 #[cfg(target_word_size = "32")]
-pub static VIDIOC_QUERYBUF: uint = 3225703945;
+pub static VIDIOC_QUERYBUF: usize = 3225703945;
 
 #[cfg(target_word_size = "64")]
-pub static VIDIOC_S_FMT: uint = 3234878981;
+pub static VIDIOC_S_FMT: usize = 3234878981;
 #[cfg(target_word_size = "32")]
-pub static VIDIOC_S_FMT: uint = 3234616837;
+pub static VIDIOC_S_FMT: usize = 3234616837;
 
 #[test]
 fn test_sizes() {

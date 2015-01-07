@@ -13,18 +13,35 @@ mod v4l2;
 pub enum Error {
     /// I/O error when using the camera.
     Io(io::IoError),
+    /// Unsupported frame interval.
+    BadInterval,
     /// Unsupported resolution (width and/or height).
     BadResolution,
     /// Unsupported format of pixel.
     BadFormat,
-    /// Unsupported frame interval.
-    BadInterval
+    /// Unsupported field.
+    BadField
 }
 
 impl error::FromError<io::IoError> for Error {
     fn from_error(err: io::IoError) -> Error {
         Error::Io(err)
     }
+}
+
+/// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/field-order.html#v4l2-field).
+#[repr(C)]
+#[derive(Copy)]
+pub enum Field {
+    None = 1,
+    Top,
+    Bottom,
+    Interplaced,
+    SeqTB,
+    SeqBT,
+    Alternate,
+    InterplacedTB,
+    InterplacedBT
 }
 
 #[derive(Copy)]
@@ -45,6 +62,11 @@ pub struct Config<'a> {
      */
     pub format: &'a [u8],
     /**
+     * Storage method of interlaced video.
+     * Default is `Field::None` (progressive).
+     */
+    pub field: Field,
+    /**
      * Number of buffers in the queue of camera.
      * Default is `2`.
      */
@@ -57,13 +79,14 @@ impl<'a> default::Default for Config<'a> {
             interval: (1, 10),
             resolution: (640, 480),
             format: b"YUYV",
+            field: Field::None,
             nbuffers: 2
         }
     }
 }
 
 pub struct FormatInfo {
-    /// FourCC of format (e.g. `"H264"`).
+    /// FourCC of format (e.g. `b"H264"`).
     pub format: [u8; 4],
     /// Information about the format.
     pub description: String,
@@ -227,8 +250,6 @@ impl<'a> Camera<'a> {
         Ok(res)
     }
 
-    /// Start streaming.
-
     /**
      * Start streaming.
      *
@@ -238,7 +259,7 @@ impl<'a> Camera<'a> {
     pub fn start(&mut self, config: &Config) -> Result<(), Error> {
         assert_eq!(self.state, State::Idle);
 
-        try!(self.tune_format(config.resolution, config.format));
+        try!(self.tune_format(config.resolution, config.format, config.field));
         try!(self.tune_stream(config.interval));
         try!(self.alloc_buffers(config.nbuffers));
 
@@ -296,22 +317,26 @@ impl<'a> Camera<'a> {
         Ok(())
     }
 
-    fn tune_format(&self, resolution: (u32, u32), format: &[u8]) -> Result<(), Error> {
+    fn tune_format(&self, resol: (u32, u32), format: &[u8], field: Field) -> Result<(), Error> {
         if format.len() != 4 {
             return Err(Error::BadFormat);
         }
 
         let fourcc = FormatInfo::fourcc(format);
-        let mut fmt = v4l2::Format::new(resolution, fourcc);
+        let mut fmt = v4l2::Format::new(resol, fourcc, field as u32);
 
         try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_S_FMT, &mut fmt));
 
-        if (fmt.fmt.width, fmt.fmt.height) != resolution {
+        if (fmt.fmt.width, fmt.fmt.height) != resol {
             return Err(Error::BadResolution);
         }
 
         if fourcc != fmt.fmt.pixelformat {
             return Err(Error::BadFormat);
+        }
+
+        if field as u32 != fmt.fmt.field {
+            return Err(Error::BadField);
         }
 
         Ok(())

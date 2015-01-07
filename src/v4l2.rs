@@ -93,20 +93,20 @@ pub struct Format {
 
 impl Format {
     #[cfg(target_word_size="64")]
-    pub fn new(resolution: (u32, u32), fourcc: u32) -> Format {
+    pub fn new(resolution: (u32, u32), fourcc: u32, field: u32) -> Format {
         Format {
             ftype: BUF_TYPE_VIDEO_CAPTURE,
             padding: 0,
-            fmt: PixFormat::new(resolution, fourcc),
+            fmt: PixFormat::new(resolution, fourcc, field),
             space: [0; 156]
         }
     }
 
     #[cfg(target_word_size="32")]
-    pub fn new(resolution: (u32, u32), fourcc: u32) -> Format {
+    pub fn new(resolution: (u32, u32), fourcc: u32, field: u32) -> Format {
         Format {
             ftype: BUF_TYPE_VIDEO_CAPTURE,
-            fmt: PixFormat::new(resolution, fourcc),
+            fmt: PixFormat::new(resolution, fourcc, field),
             space: [0; 156]
         }
     }
@@ -128,12 +128,12 @@ pub struct PixFormat {
 }
 
 impl PixFormat {
-    pub fn new(resolution: (u32, u32), fourcc: u32) -> PixFormat {
+    pub fn new(resolution: (u32, u32), fourcc: u32, field: u32) -> PixFormat {
         PixFormat {
             width: resolution.0,
             height: resolution.1,
             pixelformat: fourcc,
-            field: FIELD_ANY,
+            field: field,
             bytesperline: 0,
             sizeimage: 0,
             colorspace: 0,
@@ -348,7 +348,6 @@ impl Frmivalenum {
 }
 
 pub static BUF_TYPE_VIDEO_CAPTURE: u32 = 1;
-pub static FIELD_ANY: u32 = 0;
 pub static FMT_FLAG_COMPRESSED: u32 = 1;
 pub static FMT_FLAG_EMULATED: u32 = 2;
 pub static FRMIVAL_TYPE_DISCRET: u32 = 1;

@@ -22,9 +22,3 @@ for i in range(0u, 10) {
     file.write(frame.data).unwrap();
 }
 ```
-
-TODO
-----
-* `userptr` and `read` methods.
-* Control API.
-* Checking raspberry pi and x32.

@@ -4,6 +4,7 @@
 extern crate libc;
 
 use std::{io, fmt, str, error, default};
+use std::os::unix::Fd;
 
 mod v4l2;
 
@@ -159,7 +160,7 @@ pub struct Frame<'a> {
     pub resolution: (u32, u32),
     /// FourCC of the format.
     pub format: [u8; 4],
-    fd: int,
+    fd: Fd,
     buffer: v4l2::Buffer
 }
 
@@ -179,7 +180,7 @@ enum State {
 }
 
 pub struct Camera<'a> {
-    fd: int,
+    fd: Fd,
     state: State,
     resolution: (u32, u32),
     format: [u8; 4],

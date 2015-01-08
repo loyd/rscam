@@ -3,16 +3,16 @@
 
 extern crate libc;
 
-use std::{io, fmt, str, error, default};
+use std::{io, fmt, str, error, default, result};
 use std::os::unix::Fd;
 
 mod v4l2;
 
 
-pub type CamResult<T> = Result<T, CamError>;
+pub type Result<T> = result::Result<T, Error>;
 
 #[derive(Show)]
-pub enum CamError {
+pub enum Error {
     /// I/O error when using the camera.
     Io(io::IoError),
     /// Unsupported frame interval.
@@ -25,15 +25,15 @@ pub enum CamError {
     BadField
 }
 
-impl error::FromError<io::IoError> for CamError {
-    fn from_error(err: io::IoError) -> CamError {
-        CamError::Io(err)
+impl error::FromError<io::IoError> for Error {
+    fn from_error(err: io::IoError) -> Error {
+        Error::Io(err)
     }
 }
 
 /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/field-order.html#v4l2-field).
-#[repr(C)]
 #[derive(Copy)]
+#[repr(C)]
 pub enum Field {
     None = 1,
     Top,
@@ -135,15 +135,30 @@ impl fmt::Show for FormatInfo {
     }
 }
 
-#[derive(Copy)]
 pub enum ResolutionInfo {
-    Discrete(u32, u32)
+    Discretes(Vec<(u32, u32)>),
+    Stepwise {
+        min: (u32, u32),
+        max: (u32, u32),
+        step: (u32, u32)
+    }
 }
 
 impl fmt::Show for ResolutionInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            ResolutionInfo::Discrete(x, y) => write!(f, "Discrete {}x{}", x, y)
+            ResolutionInfo::Discretes(ref d) => {
+                try!(write!(f, "Discretes: {}x{}", d[0].0, d[0].1));
+
+                for res in d.slice_from(1).iter() {
+                    try!(write!(f, " , {}x{}", res.0, res.1));
+                }
+
+                Ok({})
+            },
+            ResolutionInfo::Stepwise {min, max, step} =>
+                write!(f, "Stepwise from {}x{} to {}x{} by {}x{}",
+                    min.0, min.1, max.0, max.1, step.0, step.1)
         }
     }
 }
@@ -212,39 +227,50 @@ impl<'a> Camera<'a> {
     }
 
     /// Get detailed info about the available resolutions.
-    pub fn resolutions(&self, format: &[u8]) -> CamResult<Vec<ResolutionInfo>> {
-        let mut resolutions = vec![];
-
+    pub fn resolutions(&self, format: &[u8]) -> Result<ResolutionInfo> {
         if format.len() != 4 {
-            return Err(CamError::BadFormat);
+            return Err(Error::BadFormat);
         }
 
         let fourcc = FormatInfo::fourcc(format);
         let mut size = v4l2::Frmsizeenum::new(fourcc);
 
-        while try!(v4l2::xioctl_valid(self.fd, v4l2::VIDIOC_ENUM_FRAMESIZES, &mut size)) {
-            if fourcc != size.pixelformat {
-                return Err(CamError::BadFormat);
-            }
+        try!(v4l2::xioctl_valid(self.fd, v4l2::VIDIOC_ENUM_FRAMESIZES, &mut size));
 
-            if size.ftype != v4l2::FRMSIZE_TYPE_DISCRETE {
-                size.index += 1;
-                continue;
-            }
-
-            resolutions.push(ResolutionInfo::Discrete(size.discrete.width, size.discrete.height));
-            size.index += 1;
+        if fourcc != size.pixelformat {
+            return Err(Error::BadFormat);
         }
 
-        Ok(resolutions)
+        if size.ftype == v4l2::FRMSIZE_TYPE_DISCRETE {
+            let mut discretes = vec![(size.discrete().width, size.discrete().height)];
+            size.index = 1;
+
+            while try!(v4l2::xioctl_valid(self.fd, v4l2::VIDIOC_ENUM_FRAMESIZES, &mut size)) {
+                {
+                    let discrete = size.discrete();
+                    discretes.push((discrete.width, discrete.height));
+                }
+                size.index += 1;
+            }
+
+            Ok(ResolutionInfo::Discretes(discretes))
+        } else {
+            let sw = size.stepwise();
+
+            Ok(ResolutionInfo::Stepwise {
+                min: (sw.min_width, sw.min_height),
+                max: (sw.max_width, sw.max_height),
+                step: (sw.step_width, sw.step_height)
+            })
+        }
     }
 
     /// Get detailed info about the available intervals.
-    pub fn intervals(&self, format: &[u8], resolution: (u32, u32)) -> CamResult<Vec<IntervalInfo>> {
+    pub fn intervals(&self, format: &[u8], resolution: (u32, u32)) -> Result<Vec<IntervalInfo>> {
         let mut intervals = vec![];
 
         if format.len() != 4 {
-            return Err(CamError::BadFormat);
+            return Err(Error::BadFormat);
         }
 
         let fourcc = FormatInfo::fourcc(format);
@@ -252,11 +278,11 @@ impl<'a> Camera<'a> {
 
         while try!(v4l2::xioctl_valid(self.fd, v4l2::VIDIOC_ENUM_FRAMEINTERVALS, &mut ival)) {
             if fourcc != ival.pixelformat {
-                return Err(CamError::BadFormat);
+                return Err(Error::BadFormat);
             }
 
             if resolution != (ival.width, ival.height) {
-                return Err(CamError::BadFormat);
+                return Err(Error::BadFormat);
             }
 
             if ival.ftype == v4l2::FRMIVAL_TYPE_DISCRETE {
@@ -276,7 +302,7 @@ impl<'a> Camera<'a> {
      * # Panics
      * if recalled or called after `stop()`.
      */
-    pub fn start(&mut self, config: &Config) -> CamResult<()> {
+    pub fn start(&mut self, config: &Config) -> Result<()> {
         assert_eq!(self.state, State::Idle);
 
         try!(self.tune_format(config.resolution, config.format, config.field));
@@ -285,7 +311,7 @@ impl<'a> Camera<'a> {
 
         if let Err(err) = self.streamon() {
             let _ = self.free_buffers();
-            return Err(CamError::Io(err));
+            return Err(Error::Io(err));
         }
 
         self.resolution = config.resolution;
@@ -337,9 +363,9 @@ impl<'a> Camera<'a> {
         Ok(())
     }
 
-    fn tune_format(&self, resolution: (u32, u32), format: &[u8], field: Field) -> CamResult<()> {
+    fn tune_format(&self, resolution: (u32, u32), format: &[u8], field: Field) -> Result<()> {
         if format.len() != 4 {
-            return Err(CamError::BadFormat);
+            return Err(Error::BadFormat);
         }
 
         let fourcc = FormatInfo::fourcc(format);
@@ -348,34 +374,34 @@ impl<'a> Camera<'a> {
         try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_S_FMT, &mut fmt));
 
         if resolution != (fmt.fmt.width, fmt.fmt.height) {
-            return Err(CamError::BadResolution);
+            return Err(Error::BadResolution);
         }
 
         if fourcc != fmt.fmt.pixelformat {
-            return Err(CamError::BadFormat);
+            return Err(Error::BadFormat);
         }
 
         if field as u32 != fmt.fmt.field {
-            return Err(CamError::BadField);
+            return Err(Error::BadField);
         }
 
         Ok(())
     }
 
-    fn tune_stream(&self, interval: (u32, u32)) -> CamResult<()> {
+    fn tune_stream(&self, interval: (u32, u32)) -> Result<()> {
         let mut parm = v4l2::StreamParm::new(interval);
 
         try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_S_PARM, &mut parm));
         let time = parm.parm.timeperframe;
 
         match (time.numerator * interval.1, time.denominator * interval.0) {
-            (0, _) | (_, 0) => Err(CamError::BadInterval),
-            (x, y) if x != y => Err(CamError::BadInterval),
+            (0, _) | (_, 0) => Err(Error::BadInterval),
+            (x, y) if x != y => Err(Error::BadInterval),
             _ => Ok(())
         }
     }
 
-    fn alloc_buffers(&mut self, nbuffers: u32) -> CamResult<()> {
+    fn alloc_buffers(&mut self, nbuffers: u32) -> Result<()> {
         let mut req = v4l2::RequestBuffers::new(nbuffers);
 
         try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_REQBUFS, &mut req));

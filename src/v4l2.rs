@@ -318,8 +318,8 @@ pub struct Frmsizeenum {
     pub index: u32,
     pub pixelformat: u32,
     pub ftype: u32,
-    pub discrete: FrmsizeDiscrete,
-    reserved: [u32; 6]
+    data: [u32; 6],
+    reserved: [u32; 2]
 }
 
 impl Frmsizeenum {
@@ -328,19 +328,36 @@ impl Frmsizeenum {
             index: 0,
             pixelformat: fourcc,
             ftype: 0,
-            discrete: FrmsizeDiscrete {
-                width: 0,
-                height: 0
-            },
-            reserved: [0; 6]
+            data: [0; 6],
+            reserved: [0; 2]
         }
+    }
+
+    pub fn discrete(&mut self) -> &FrmsizeDiscrete {
+        unsafe { mem::transmute(self.data.as_mut_ptr()) }
+    }
+
+    pub fn stepwise(&mut self) -> &FrmsizeStepwise {
+        unsafe { mem::transmute(self.data.as_mut_ptr()) }
     }
 }
 
+#[allow(dead_code)]
 #[repr(C)]
 pub struct FrmsizeDiscrete {
     pub width: u32,
     pub height: u32
+}
+
+#[allow(dead_code)]
+#[repr(C)]
+pub struct FrmsizeStepwise {
+    pub min_width: u32,
+    pub max_width: u32,
+    pub step_width: u32,
+    pub min_height: u32,
+    pub max_height: u32,
+    pub step_height: u32
 }
 
 #[repr(C)]

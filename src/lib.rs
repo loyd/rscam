@@ -163,9 +163,32 @@ impl fmt::Show for ResolutionInfo {
     }
 }
 
-#[derive(Copy)]
 pub enum IntervalInfo {
-    Discrete(u32, u32)
+    Discretes(Vec<(u32, u32)>),
+    Stepwise {
+        min: (u32, u32),
+        max: (u32, u32),
+        step: (u32, u32)
+    }
+}
+
+impl fmt::Show for IntervalInfo {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            IntervalInfo::Discretes(ref d) => {
+                try!(write!(f, "Discretes: {}fps", d[0].1/d[0].0));
+
+                for res in d.slice_from(1).iter() {
+                    try!(write!(f, " , {}fps", res.1/res.0));
+                }
+
+                Ok({})
+            },
+            IntervalInfo::Stepwise {min, max, step} =>
+                write!(f, "Stepwise from {}fps to {}fps by {}fps",
+                    max.1/max.0, min.1/min.0, step.1/step.0)
+        }
+    }
 }
 
 pub struct Frame<'a> {
@@ -266,34 +289,46 @@ impl<'a> Camera<'a> {
     }
 
     /// Get detailed info about the available intervals.
-    pub fn intervals(&self, format: &[u8], resolution: (u32, u32)) -> Result<Vec<IntervalInfo>> {
-        let mut intervals = vec![];
-
+    pub fn intervals(&self, format: &[u8], resolution: (u32, u32)) -> Result<IntervalInfo> {
         if format.len() != 4 {
             return Err(Error::BadFormat);
         }
 
         let fourcc = FormatInfo::fourcc(format);
-        let mut ival = v4l2::Frmivalenum::new(resolution, fourcc);
+        let mut ival = v4l2::Frmivalenum::new(fourcc, resolution);
 
-        while try!(v4l2::xioctl_valid(self.fd, v4l2::VIDIOC_ENUM_FRAMEINTERVALS, &mut ival)) {
-            if fourcc != ival.pixelformat {
-                return Err(Error::BadFormat);
-            }
+        try!(v4l2::xioctl_valid(self.fd, v4l2::VIDIOC_ENUM_FRAMEINTERVALS, &mut ival));
 
-            if resolution != (ival.width, ival.height) {
-                return Err(Error::BadFormat);
-            }
-
-            if ival.ftype == v4l2::FRMIVAL_TYPE_DISCRETE {
-                intervals.push(
-                    IntervalInfo::Discrete(ival.discrete.numerator, ival.discrete.denominator));
-            }
-
-            ival.index += 1;
+        if fourcc != ival.pixelformat {
+            return Err(Error::BadFormat);
         }
 
-        Ok(intervals)
+        if resolution != (ival.width, ival.height) {
+            return Err(Error::BadResolution);
+        }
+
+        if ival.ftype == v4l2::FRMIVAL_TYPE_DISCRETE {
+            let mut discretes = vec![(ival.discrete().numerator, ival.discrete().denominator)];
+            ival.index = 1;
+
+            while try!(v4l2::xioctl_valid(self.fd, v4l2::VIDIOC_ENUM_FRAMEINTERVALS, &mut ival)) {
+                {
+                    let discrete = ival.discrete();
+                    discretes.push((discrete.numerator, discrete.denominator));
+                }
+                ival.index += 1;
+            }
+
+            Ok(IntervalInfo::Discretes(discretes))
+        } else {
+            let sw = ival.stepwise();
+
+            Ok(IntervalInfo::Stepwise {
+                min: (sw.min.numerator, sw.min.denominator),
+                max: (sw.max.numerator, sw.max.denominator),
+                step: (sw.step.numerator, sw.step.denominator)
+            })
+        }
     }
 
     /**

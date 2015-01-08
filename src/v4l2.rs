@@ -367,25 +367,38 @@ pub struct Frmivalenum {
     pub width: u32,
     pub height: u32,
     pub ftype: u32,
-    pub discrete: Fract,
-    reserved: [u32; 6]
+    data: [u32; 6],
+    reserved: [u32; 2]
 }
 
 impl Frmivalenum {
-    pub fn new(resolution: (u32, u32), fourcc: u32) -> Frmivalenum {
+    pub fn new(fourcc: u32, resolution: (u32, u32)) -> Frmivalenum {
         Frmivalenum {
             index: 0,
             pixelformat: fourcc,
             width: resolution.0,
             height: resolution.1,
             ftype: 0,
-            discrete: Fract {
-                numerator: 0,
-                denominator: 0
-            },
-            reserved: [0; 6]
+            data: [0; 6],
+            reserved: [0; 2]
         }
     }
+
+    pub fn discrete(&mut self) -> &Fract {
+        unsafe { mem::transmute(self.data.as_mut_ptr()) }
+    }
+
+    pub fn stepwise(&mut self) -> &FrmivalStepwise {
+        unsafe { mem::transmute(self.data.as_mut_ptr()) }
+    }
+}
+
+#[allow(dead_code)]
+#[repr(C)]
+pub struct FrmivalStepwise {
+    pub min: Fract,
+    pub max: Fract,
+    pub step: Fract
 }
 
 pub static BUF_TYPE_VIDEO_CAPTURE: u32 = 1;

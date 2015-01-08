@@ -1,22 +1,44 @@
 use std::{io, os, raw, mem};
 
 // C types and constants.
-use libc::{c_void, c_char, c_int, c_ulong, size_t, EINTR};
-use libc::types::os::arch::posix88::{off_t};
-use libc::types::os::common::posix01::timeval as Timeval;
-use libc::consts::os::posix88::{O_RDWR, PROT_READ, PROT_WRITE, MAP_SHARED};
+use libc::{c_void, c_int, c_ulong, size_t, off_t};
+use libc::timeval as Timeval;
+use libc::{EINTR, O_RDWR, PROT_READ, PROT_WRITE};
+use libc::consts::os::posix88::{MAP_SHARED};
 
 use std::ffi::CString;
 
 
-#[link(name="v4l2")]
-extern {
-    pub fn v4l2_open(file: *const c_char, flags: c_int, arg: c_int) -> c_int;
-    pub fn v4l2_close(fd: c_int) -> c_int;
-    pub fn v4l2_ioctl(fd: c_int, request: c_ulong, argp: *mut c_void) -> c_int;
-    pub fn v4l2_mmap(start: *mut c_void, length: size_t, prot: c_int,
-                 flags: c_int, fd: c_int, offset: off_t) -> *mut c_void;
-    pub fn v4l2_munmap(start: *mut c_void, length: size_t) -> c_int;
+#[cfg(feature = "use_wrapper")]
+#[link(name = "v4l2")]
+mod ll {
+    use libc::{c_void, c_char, c_int, c_ulong, size_t, off_t};
+
+    pub use self::v4l2_open as open;
+    pub use self::v4l2_close as close;
+    pub use self::v4l2_ioctl as ioctl;
+    pub use self::v4l2_mmap as mmap;
+    pub use self::v4l2_munmap as munmap;
+
+    extern {
+        fn v4l2_open(file: *const c_char, flags: c_int, arg: c_int) -> c_int;
+        fn v4l2_close(fd: c_int) -> c_int;
+        fn v4l2_ioctl(fd: c_int, request: c_ulong, argp: *mut c_void) -> c_int;
+        fn v4l2_mmap(start: *mut c_void, length: size_t, prot: c_int,
+                     flags: c_int, fd: c_int, offset: off_t) -> *mut c_void;
+        fn v4l2_munmap(start: *mut c_void, length: size_t) -> c_int;
+    }
+}
+
+#[cfg(not(feature = "use_wrapper"))]
+mod ll {
+    use libc::{c_void, c_int, c_ulong};
+
+    pub use libc::{open, close, mmap, munmap};
+
+    extern {
+        pub fn ioctl(fd: c_int, request: c_ulong, argp: *mut c_void) -> c_int;
+    }
 }
 
 macro_rules! check(
@@ -29,13 +51,13 @@ macro_rules! check(
 
 pub fn open(file: &str) -> io::IoResult<isize> {
     let c_str = CString::from_slice(file.as_bytes());
-    let fd = unsafe { v4l2_open(c_str.as_ptr(), O_RDWR, 0) as isize };
+    let fd = unsafe { ll::open(c_str.as_ptr(), O_RDWR, 0) as isize };
     check!(fd != -1);
     Ok(fd)
 }
 
 pub fn close(fd: isize) -> io::IoResult<()> {
-    check!(unsafe { v4l2_close(fd as c_int) != -1 });
+    check!(unsafe { ll::close(fd as c_int) != -1 });
     Ok(())
 }
 
@@ -46,7 +68,7 @@ pub fn xioctl<T>(fd: isize, request: usize, arg: &mut T) -> io::IoResult<()> {
         let mut ok;
 
         loop {
-            ok = v4l2_ioctl(fd as c_int, request as c_ulong, argp as *mut c_void) != -1;
+            ok = ll::ioctl(fd as c_int, request as c_ulong, argp as *mut c_void) != -1;
             if ok || os::errno() != EINTR as usize {
                 break;
             }
@@ -67,7 +89,7 @@ pub fn xioctl_valid<T>(fd: isize, request: usize, arg: &mut T) -> io::IoResult<b
 }
 
 pub fn mmap<'a>(length: usize, fd: isize, offset: usize) -> io::IoResult<&'a mut [u8]> {
-    let ptr = unsafe { v4l2_mmap(0 as *mut c_void, length as size_t, PROT_READ|PROT_WRITE,
+    let ptr = unsafe { ll::mmap(0 as *mut c_void, length as size_t, PROT_READ|PROT_WRITE,
                                  MAP_SHARED, fd as c_int, offset as off_t) as *mut u8 };
 
     check!(ptr != -1 as *mut u8);
@@ -76,7 +98,7 @@ pub fn mmap<'a>(length: usize, fd: isize, offset: usize) -> io::IoResult<&'a mut
 
 pub fn munmap(region: &mut [u8]) -> io::IoResult<()> {
     check!(unsafe {
-        v4l2_munmap(&mut region[0] as *mut u8 as *mut c_void, region.len() as size_t) == 0
+        ll::munmap(&mut region[0] as *mut u8 as *mut c_void, region.len() as size_t) == 0
     });
 
     Ok(())

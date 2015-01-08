@@ -9,3 +9,8 @@ repository = "https://github.com/loyd/rscam"
 documentation = "http://loyd.github.io/rscam"
 license = "MIT"
 readme = "README.md"
+
+[features]
+
+default = ["use_wrapper"]
+use_wrapper = []

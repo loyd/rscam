@@ -6,12 +6,12 @@ fn main() {
     for format in camera.formats().unwrap().iter() {
         println!("{:?}", format);
 
-        for mode in format.modes.iter() {
+        for mode in camera.resolutions(format.format).unwrap().iter() {
             print!("    {:?}:", mode);
 
-            for interval in mode.intervals.iter() {
-                print!(" {:?}", interval);
-            }
+            // for interval in camera.intervals(format.format).unwrap().iter() {
+            //     print!(" {:?}", interval);
+            // }
 
             println!("");
         }

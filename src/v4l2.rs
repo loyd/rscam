@@ -299,10 +299,10 @@ pub struct Frmsizeenum {
 }
 
 impl Frmsizeenum {
-    pub fn new() -> Frmsizeenum {
+    pub fn new(fourcc: u32) -> Frmsizeenum {
         Frmsizeenum {
             index: 0,
-            pixelformat: 0,
+            pixelformat: fourcc,
             ftype: 0,
             discrete: FrmsizeDiscrete {
                 width: 0,
@@ -331,12 +331,12 @@ pub struct Frmivalenum {
 }
 
 impl Frmivalenum {
-    pub fn new() -> Frmivalenum {
+    pub fn new(resolution: (u32, u32), fourcc: u32) -> Frmivalenum {
         Frmivalenum {
             index: 0,
-            pixelformat: 0,
-            width: 0,
-            height: 0,
+            pixelformat: fourcc,
+            width: resolution.0,
+            height: resolution.1,
             ftype: 0,
             discrete: Fract {
                 numerator: 0,
@@ -350,7 +350,7 @@ impl Frmivalenum {
 pub static BUF_TYPE_VIDEO_CAPTURE: u32 = 1;
 pub static FMT_FLAG_COMPRESSED: u32 = 1;
 pub static FMT_FLAG_EMULATED: u32 = 2;
-pub static FRMIVAL_TYPE_DISCRET: u32 = 1;
+pub static FRMIVAL_TYPE_DISCRETE: u32 = 1;
 pub static FRMSIZE_TYPE_DISCRETE: u32 = 1;
 pub static MEMORY_MMAP: u32 = 1;
 

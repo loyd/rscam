@@ -333,11 +333,11 @@ impl Frmsizeenum {
         }
     }
 
-    pub fn discrete(&mut self) -> &FrmsizeDiscrete {
+    pub fn discrete(&mut self) -> &mut FrmsizeDiscrete {
         unsafe { mem::transmute(self.data.as_mut_ptr()) }
     }
 
-    pub fn stepwise(&mut self) -> &FrmsizeStepwise {
+    pub fn stepwise(&mut self) -> &mut FrmsizeStepwise {
         unsafe { mem::transmute(self.data.as_mut_ptr()) }
     }
 }
@@ -384,11 +384,11 @@ impl Frmivalenum {
         }
     }
 
-    pub fn discrete(&mut self) -> &Fract {
+    pub fn discrete(&mut self) -> &mut Fract {
         unsafe { mem::transmute(self.data.as_mut_ptr()) }
     }
 
-    pub fn stepwise(&mut self) -> &FrmivalStepwise {
+    pub fn stepwise(&mut self) -> &mut FrmivalStepwise {
         unsafe { mem::transmute(self.data.as_mut_ptr()) }
     }
 }

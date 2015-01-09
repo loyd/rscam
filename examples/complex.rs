@@ -8,6 +8,7 @@ fn main() {
 
     for format in camera.formats().unwrap().iter() {
         println!("{:?}", format);
+        println!("  {:?}", camera.resolutions(&format.format).unwrap());
     }
 
     camera.start(&rscam::Config {

@@ -7,12 +7,14 @@ fn main() {
         println!("{:?}", format);
 
         let resolutions = camera.resolutions(&format.format).unwrap();
-        println!("  {:?}", resolutions);
 
         if let rscam::ResolutionInfo::Discretes(d) = resolutions {
             for resol in d.iter() {
-                println!("   {:?}", camera.intervals(&format.format, *resol).unwrap());
+                println!("  {}x{}  {:?}", resol.0, resol.1,
+                    camera.intervals(&format.format, *resol).unwrap());
             }
+        } else {
+            println!("  {:?}", resolutions);
         }
     }
 }

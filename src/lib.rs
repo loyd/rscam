@@ -151,7 +151,7 @@ impl fmt::Show for ResolutionInfo {
                 try!(write!(f, "Discretes: {}x{}", d[0].0, d[0].1));
 
                 for res in d.slice_from(1).iter() {
-                    try!(write!(f, " , {}x{}", res.0, res.1));
+                    try!(write!(f, ", {}x{}", res.0, res.1));
                 }
 
                 Ok({})
@@ -179,7 +179,7 @@ impl fmt::Show for IntervalInfo {
                 try!(write!(f, "Discretes: {}fps", d[0].1/d[0].0));
 
                 for res in d.slice_from(1).iter() {
-                    try!(write!(f, " , {}fps", res.1/res.0));
+                    try!(write!(f, ", {}fps", res.1/res.0));
                 }
 
                 Ok({})
@@ -373,7 +373,7 @@ impl<'a> Camera<'a> {
         assert!(buf.index < self.buffers.len() as u32);
 
         Ok(Frame {
-            data: self.buffers[buf.index as usize].slice_to(buf.bytesused as usize),
+            data: self.buffers[buf.index as uint].slice_to(buf.bytesused as uint),
             resolution: self.resolution,
             format: self.format,
             fd: self.fd,
@@ -446,7 +446,7 @@ impl<'a> Camera<'a> {
             buf.index = i;
             try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_QUERYBUF, &mut buf));
 
-            let region = try!(v4l2::mmap(buf.length as usize, self.fd, buf.m));
+            let region = try!(v4l2::mmap(buf.length as uint, self.fd, buf.m));
 
             self.buffers.push(region);
         }

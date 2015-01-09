@@ -401,41 +401,41 @@ pub struct FrmivalStepwise {
     pub step: Fract
 }
 
-pub static BUF_TYPE_VIDEO_CAPTURE: u32 = 1;
-pub static FMT_FLAG_COMPRESSED: u32 = 1;
-pub static FMT_FLAG_EMULATED: u32 = 2;
-pub static FRMIVAL_TYPE_DISCRETE: u32 = 1;
-pub static FRMSIZE_TYPE_DISCRETE: u32 = 1;
-pub static MEMORY_MMAP: u32 = 1;
+pub const BUF_TYPE_VIDEO_CAPTURE: u32 = 1;
+pub const FMT_FLAG_COMPRESSED: u32 = 1;
+pub const FMT_FLAG_EMULATED: u32 = 2;
+pub const FRMIVAL_TYPE_DISCRETE: u32 = 1;
+pub const FRMSIZE_TYPE_DISCRETE: u32 = 1;
+pub const MEMORY_MMAP: u32 = 1;
 
 // IOCTL codes.
-pub static VIDIOC_ENUM_FMT: uint = 3225441794;
-pub static VIDIOC_ENUM_FRAMEINTERVALS: uint = 3224655435;
-pub static VIDIOC_ENUM_FRAMESIZES: uint = 3224131146;
-pub static VIDIOC_REQBUFS: uint = 3222558216;
-pub static VIDIOC_S_PARM: uint = 3234616854;
-pub static VIDIOC_STREAMOFF: uint = 1074026003;
-pub static VIDIOC_STREAMON: uint = 1074026002;
+pub const VIDIOC_ENUM_FMT: uint = 3225441794;
+pub const VIDIOC_ENUM_FRAMEINTERVALS: uint = 3224655435;
+pub const VIDIOC_ENUM_FRAMESIZES: uint = 3224131146;
+pub const VIDIOC_REQBUFS: uint = 3222558216;
+pub const VIDIOC_S_PARM: uint = 3234616854;
+pub const VIDIOC_STREAMOFF: uint = 1074026003;
+pub const VIDIOC_STREAMON: uint = 1074026002;
 
 #[cfg(target_word_size = "64")]
-pub static VIDIOC_DQBUF: uint = 3227014673;
+pub const VIDIOC_DQBUF: uint = 3227014673;
 #[cfg(target_word_size = "32")]
-pub static VIDIOC_DQBUF: uint = 3225703953;
+pub const VIDIOC_DQBUF: uint = 3225703953;
 
 #[cfg(target_word_size = "64")]
-pub static VIDIOC_QBUF: uint = 3227014671;
+pub const VIDIOC_QBUF: uint = 3227014671;
 #[cfg(target_word_size = "32")]
-pub static VIDIOC_QBUF: uint = 3225703951;
+pub const VIDIOC_QBUF: uint = 3225703951;
 
 #[cfg(target_word_size = "64")]
-pub static VIDIOC_QUERYBUF: uint = 3227014665;
+pub const VIDIOC_QUERYBUF: uint = 3227014665;
 #[cfg(target_word_size = "32")]
-pub static VIDIOC_QUERYBUF: uint = 3225703945;
+pub const VIDIOC_QUERYBUF: uint = 3225703945;
 
 #[cfg(target_word_size = "64")]
-pub static VIDIOC_S_FMT: uint = 3234878981;
+pub const VIDIOC_S_FMT: uint = 3234878981;
 #[cfg(target_word_size = "32")]
-pub static VIDIOC_S_FMT: uint = 3234616837;
+pub const VIDIOC_S_FMT: uint = 3234616837;
 
 #[test]
 fn test_sizes() {

@@ -1,3 +1,4 @@
+#![allow(unstable)]
 #![feature(slicing_syntax)]
 #![feature(unsafe_destructor)]
 
@@ -373,7 +374,7 @@ impl<'a> Camera<'a> {
         assert!(buf.index < self.buffers.len() as u32);
 
         Ok(Frame {
-            data: self.buffers[buf.index as uint].slice_to(buf.bytesused as uint),
+            data: self.buffers[buf.index as usize].slice_to(buf.bytesused as usize),
             resolution: self.resolution,
             format: self.format,
             fd: self.fd,
@@ -446,7 +447,7 @@ impl<'a> Camera<'a> {
             buf.index = i;
             try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_QUERYBUF, &mut buf));
 
-            let region = try!(v4l2::mmap(buf.length as uint, self.fd, buf.m));
+            let region = try!(v4l2::mmap(buf.length as usize, self.fd, buf.m));
 
             self.buffers.push(region);
         }

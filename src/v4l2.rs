@@ -63,7 +63,7 @@ pub fn close(fd: Fd) -> io::IoResult<()> {
     Ok(())
 }
 
-pub fn xioctl<T>(fd: Fd, request: uint, arg: &mut T) -> io::IoResult<()> {
+pub fn xioctl<T>(fd: Fd, request: usize, arg: &mut T) -> io::IoResult<()> {
     let argp: *mut T = arg;
 
     check!(unsafe {
@@ -71,7 +71,7 @@ pub fn xioctl<T>(fd: Fd, request: uint, arg: &mut T) -> io::IoResult<()> {
 
         loop {
             ok = ll::ioctl(fd, request as c_ulong, argp as *mut c_void) != -1;
-            if ok || os::errno() != EINTR as uint {
+            if ok || os::errno() != EINTR as usize {
                 break;
             }
         }
@@ -82,7 +82,7 @@ pub fn xioctl<T>(fd: Fd, request: uint, arg: &mut T) -> io::IoResult<()> {
     Ok(())
 }
 
-pub fn xioctl_valid<T>(fd: Fd, request: uint, arg: &mut T) -> io::IoResult<bool> {
+pub fn xioctl_valid<T>(fd: Fd, request: usize, arg: &mut T) -> io::IoResult<bool> {
     match xioctl(fd, request, arg) {
         Err(io::IoError { kind: io::InvalidInput, .. }) => Ok(false),
         Err(err) => Err(err),
@@ -90,7 +90,7 @@ pub fn xioctl_valid<T>(fd: Fd, request: uint, arg: &mut T) -> io::IoResult<bool>
     }
 }
 
-pub fn mmap<'a>(length: uint, fd: Fd, offset: uint) -> io::IoResult<&'a mut [u8]> {
+pub fn mmap<'a>(length: usize, fd: Fd, offset: usize) -> io::IoResult<&'a mut [u8]> {
     let ptr = unsafe { ll::mmap(0 as *mut c_void, length as size_t, PROT_READ|PROT_WRITE,
                                  MAP_SHARED, fd, offset as off_t) as *mut u8 };
 
@@ -109,14 +109,14 @@ pub fn munmap(region: &mut [u8]) -> io::IoResult<()> {
 #[repr(C)]
 pub struct Format {
     pub ftype: u32,
-    #[cfg(target_word_size="64")]
+    #[cfg(target_pointer_width = "64")]
     padding: u32,
     pub fmt: PixFormat,
     space: [u8; 156]
 }
 
 impl Format {
-    #[cfg(target_word_size="64")]
+    #[cfg(target_pointer_width = "64")]
     pub fn new(resolution: (u32, u32), fourcc: u32, field: u32) -> Format {
         Format {
             ftype: BUF_TYPE_VIDEO_CAPTURE,
@@ -126,7 +126,7 @@ impl Format {
         }
     }
 
-    #[cfg(target_word_size="32")]
+    #[cfg(target_pointer_width = "32")]
     pub fn new(resolution: (u32, u32), fourcc: u32, field: u32) -> Format {
         Format {
             ftype: BUF_TYPE_VIDEO_CAPTURE,
@@ -199,7 +199,7 @@ pub struct Buffer {
     pub timecode: TimeCode,
     pub sequence: u32,
     pub memory: u32,
-    pub m: uint,   // offset (__u32) or userptr (ulong)
+    pub m: usize,   // offset (__u32) or userptr (ulong)
     pub length: u32,
     pub input: u32,
     reserved: u32
@@ -409,43 +409,43 @@ pub const FRMSIZE_TYPE_DISCRETE: u32 = 1;
 pub const MEMORY_MMAP: u32 = 1;
 
 // IOCTL codes.
-pub const VIDIOC_ENUM_FMT: uint = 3225441794;
-pub const VIDIOC_ENUM_FRAMEINTERVALS: uint = 3224655435;
-pub const VIDIOC_ENUM_FRAMESIZES: uint = 3224131146;
-pub const VIDIOC_REQBUFS: uint = 3222558216;
-pub const VIDIOC_S_PARM: uint = 3234616854;
-pub const VIDIOC_STREAMOFF: uint = 1074026003;
-pub const VIDIOC_STREAMON: uint = 1074026002;
+pub const VIDIOC_ENUM_FMT: usize = 3225441794;
+pub const VIDIOC_ENUM_FRAMEINTERVALS: usize = 3224655435;
+pub const VIDIOC_ENUM_FRAMESIZES: usize = 3224131146;
+pub const VIDIOC_REQBUFS: usize = 3222558216;
+pub const VIDIOC_S_PARM: usize = 3234616854;
+pub const VIDIOC_STREAMOFF: usize = 1074026003;
+pub const VIDIOC_STREAMON: usize = 1074026002;
 
-#[cfg(target_word_size = "64")]
-pub const VIDIOC_DQBUF: uint = 3227014673;
-#[cfg(target_word_size = "32")]
-pub const VIDIOC_DQBUF: uint = 3225703953;
+#[cfg(target_pointer_width = "64")]
+pub const VIDIOC_DQBUF: usize = 3227014673;
+#[cfg(target_pointer_width = "32")]
+pub const VIDIOC_DQBUF: usize = 3225703953;
 
-#[cfg(target_word_size = "64")]
-pub const VIDIOC_QBUF: uint = 3227014671;
-#[cfg(target_word_size = "32")]
-pub const VIDIOC_QBUF: uint = 3225703951;
+#[cfg(target_pointer_width = "64")]
+pub const VIDIOC_QBUF: usize = 3227014671;
+#[cfg(target_pointer_width = "32")]
+pub const VIDIOC_QBUF: usize = 3225703951;
 
-#[cfg(target_word_size = "64")]
-pub const VIDIOC_QUERYBUF: uint = 3227014665;
-#[cfg(target_word_size = "32")]
-pub const VIDIOC_QUERYBUF: uint = 3225703945;
+#[cfg(target_pointer_width = "64")]
+pub const VIDIOC_QUERYBUF: usize = 3227014665;
+#[cfg(target_pointer_width = "32")]
+pub const VIDIOC_QUERYBUF: usize = 3225703945;
 
-#[cfg(target_word_size = "64")]
-pub const VIDIOC_S_FMT: uint = 3234878981;
-#[cfg(target_word_size = "32")]
-pub const VIDIOC_S_FMT: uint = 3234616837;
+#[cfg(target_pointer_width = "64")]
+pub const VIDIOC_S_FMT: usize = 3234878981;
+#[cfg(target_pointer_width = "32")]
+pub const VIDIOC_S_FMT: usize = 3234616837;
 
 #[test]
 fn test_sizes() {
-    if cfg!(target_word_size = "64") {
+    if cfg!(target_pointer_width = "64") {
         assert_eq!(mem::size_of::<Format>(), 208);
     } else {
         assert_eq!(mem::size_of::<Format>(), 204);
     }
 
-    if cfg!(target_word_size = "64") {
+    if cfg!(target_pointer_width = "64") {
         assert_eq!(mem::size_of::<Buffer>(), 88);
     } else {
         assert_eq!(mem::size_of::<Buffer>(), 68);

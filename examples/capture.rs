@@ -1,3 +1,5 @@
+#![allow(unstable)]
+
 extern crate rscam;
 
 use std::iter;
@@ -13,7 +15,7 @@ fn main() {
         ..Default::default()
     }).unwrap();
 
-    for i in iter::count(1u, 1) {
+    for i in iter::count(1, 1) {
         let frame = camera.capture().unwrap();
         println!("Frame #{} of length {}", i, frame.data.len());
     }

@@ -1,3 +1,5 @@
+#![allow(unstable)]
+
 extern crate rscam;
 
 use std::io::fs;
@@ -18,7 +20,7 @@ fn main() {
         ..Default::default()
     }).unwrap();
 
-    for i in range(0u, 10) {
+    for i in range(0, 10) {
         let frame = camera.capture().unwrap();
 
         println!("Frame of length {}", frame.data.len());

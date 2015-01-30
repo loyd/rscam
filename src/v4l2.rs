@@ -1,4 +1,4 @@
-use std::{io, os, raw, mem};
+use std::{old_io, os, raw, mem};
 use std::os::unix::Fd;
 use std::ffi::CString;
 
@@ -46,24 +46,24 @@ mod ll {
 macro_rules! check(
     ($cond:expr) =>
         (try!(match !$cond && os::errno() > 0 {
-            true  => Err(io::IoError::last_error()),
+            true  => Err(old_io::IoError::last_error()),
             false => Ok(())
         }))
 );
 
-pub fn open(file: &str) -> io::IoResult<Fd> {
+pub fn open(file: &str) -> old_io::IoResult<Fd> {
     let c_str = CString::from_slice(file.as_bytes());
     let fd = unsafe { ll::open(c_str.as_ptr(), O_RDWR, 0) as Fd };
     check!(fd != -1);
     Ok(fd)
 }
 
-pub fn close(fd: Fd) -> io::IoResult<()> {
+pub fn close(fd: Fd) -> old_io::IoResult<()> {
     check!(unsafe { ll::close(fd) != -1 });
     Ok(())
 }
 
-pub fn xioctl<T>(fd: Fd, request: usize, arg: &mut T) -> io::IoResult<()> {
+pub fn xioctl<T>(fd: Fd, request: usize, arg: &mut T) -> old_io::IoResult<()> {
     let argp: *mut T = arg;
 
     check!(unsafe {
@@ -82,15 +82,15 @@ pub fn xioctl<T>(fd: Fd, request: usize, arg: &mut T) -> io::IoResult<()> {
     Ok(())
 }
 
-pub fn xioctl_valid<T>(fd: Fd, request: usize, arg: &mut T) -> io::IoResult<bool> {
+pub fn xioctl_valid<T>(fd: Fd, request: usize, arg: &mut T) ->old_io::IoResult<bool> {
     match xioctl(fd, request, arg) {
-        Err(io::IoError { kind: io::InvalidInput, .. }) => Ok(false),
+        Err(old_io::IoError { kind: old_io::InvalidInput, .. }) => Ok(false),
         Err(err) => Err(err),
         Ok(_) => Ok(true)
     }
 }
 
-pub fn mmap<'a>(length: usize, fd: Fd, offset: usize) -> io::IoResult<&'a mut [u8]> {
+pub fn mmap<'a>(length: usize, fd: Fd, offset: usize) -> old_io::IoResult<&'a mut [u8]> {
     let ptr = unsafe { ll::mmap(0 as *mut c_void, length as size_t, PROT_READ|PROT_WRITE,
                                  MAP_SHARED, fd, offset as off_t) as *mut u8 };
 
@@ -98,7 +98,7 @@ pub fn mmap<'a>(length: usize, fd: Fd, offset: usize) -> io::IoResult<&'a mut [u
     Ok(unsafe { mem::transmute(raw::Slice { data: ptr, len: length}) })
 }
 
-pub fn munmap(region: &mut [u8]) -> io::IoResult<()> {
+pub fn munmap(region: &mut [u8]) -> old_io::IoResult<()> {
     check!(unsafe {
         ll::munmap(&mut region[0] as *mut u8 as *mut c_void, region.len() as size_t) == 0
     });

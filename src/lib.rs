@@ -1,6 +1,5 @@
-#![allow(unstable)]
-#![feature(slicing_syntax)]
-#![feature(unsafe_destructor)]
+#![feature(libc, std_misc, os, core, collections)]
+#![feature(slicing_syntax, unsafe_destructor)]
 
 extern crate libc;
 
@@ -110,7 +109,7 @@ impl FormatInfo {
             ],
 
             description: String::from_utf8_lossy(match desc.position_elem(&0) {
-                Some(x) => desc.slice_to(x),
+                Some(x) => &desc[..x],
                 None    => desc
             }).into_owned(),
 
@@ -124,7 +123,7 @@ impl FormatInfo {
     }
 }
 
-impl fmt::Show for FormatInfo {
+impl fmt::Debug for FormatInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} ({}{})", str::from_utf8(self.format.as_slice()).unwrap(),
             self.description, match (self.compressed, self.emulated) {
@@ -145,13 +144,13 @@ pub enum ResolutionInfo {
     }
 }
 
-impl fmt::Show for ResolutionInfo {
+impl fmt::Debug for ResolutionInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             ResolutionInfo::Discretes(ref d) => {
                 try!(write!(f, "Discretes: {}x{}", d[0].0, d[0].1));
 
-                for res in d.slice_from(1).iter() {
+                for res in (&d[1..]).iter() {
                     try!(write!(f, ", {}x{}", res.0, res.1));
                 }
 
@@ -173,13 +172,13 @@ pub enum IntervalInfo {
     }
 }
 
-impl fmt::Show for IntervalInfo {
+impl fmt::Debug for IntervalInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             IntervalInfo::Discretes(ref d) => {
                 try!(write!(f, "Discretes: {}fps", d[0].1/d[0].0));
 
-                for res in d.slice_from(1).iter() {
+                for res in (&d[1..]).iter() {
                     try!(write!(f, ", {}fps", res.1/res.0));
                 }
 
@@ -374,7 +373,7 @@ impl<'a> Camera<'a> {
         assert!(buf.index < self.buffers.len() as u32);
 
         Ok(Frame {
-            data: self.buffers[buf.index as usize].slice_to(buf.bytesused as usize),
+            data: &self.buffers[buf.index as usize][..buf.bytesused as usize],
             resolution: self.resolution,
             format: self.format,
             fd: self.fd,

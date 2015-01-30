@@ -1,4 +1,4 @@
-#![allow(unstable)]
+#![feature(core, io, path)]
 
 extern crate rscam;
 
@@ -26,6 +26,6 @@ fn main() {
         println!("Frame of length {}", frame.data.len());
 
         let mut file = fs::File::create(&Path::new(format!("frame-{}.jpg", i)));
-        file.write(frame.data).unwrap();
+        file.write_all(frame.data).unwrap();
     }
 }

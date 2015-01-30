@@ -2,7 +2,7 @@
 
 extern crate rscam;
 
-use std::io::fs;
+use std::old_io::fs;
 use std::default::Default;
 
 fn main() {

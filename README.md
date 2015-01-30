@@ -22,3 +22,5 @@ for i in range(0u, 10) {
     file.write(frame.data).unwrap();
 }
 ```
+
+Default feature `use_wrapper` enables the v4l2 wrapper (e.g. `v4l2_ioctl()` instead of `ioctl()`). In this case, there is dependence on *libv4l2*.

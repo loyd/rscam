@@ -1,5 +1,5 @@
-#![feature(libc, std_misc, os, core, collections)]
-#![feature(slicing_syntax, unsafe_destructor)]
+#![feature(libc, std_misc, os, core, collections, old_io)]
+#![feature(unsafe_destructor)]
 
 extern crate libc;
 
@@ -11,7 +11,7 @@ mod v4l2;
 
 pub type Result<T> = result::Result<T, Error>;
 
-#[derive(Show)]
+#[derive(Debug)]
 pub enum Error {
     /// I/O error when using the camera.
     Io(old_io::IoError),
@@ -210,7 +210,7 @@ impl<'a> Drop for Frame<'a> {
     }
 }
 
-#[derive(Show, PartialEq)]
+#[derive(Debug, PartialEq)]
 enum State {
     Idle,
     Streaming,

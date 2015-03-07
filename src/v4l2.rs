@@ -52,7 +52,7 @@ macro_rules! check(
 );
 
 pub fn open(file: &str) -> old_io::IoResult<Fd> {
-    let c_str = CString::from_slice(file.as_bytes());
+    let c_str = try!(CString::new(file));
     let fd = unsafe { ll::open(c_str.as_ptr(), O_RDWR, 0) as Fd };
     check!(fd != -1);
     Ok(fd)

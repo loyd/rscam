@@ -1,8 +1,9 @@
-#![feature(core, io, path)]
+#![feature(core, io, fs)]
 
 extern crate rscam;
 
-use std::old_io::fs;
+use std::fs;
+use std::io::Write;
 use std::default::Default;
 
 fn main() {
@@ -25,7 +26,7 @@ fn main() {
 
         println!("Frame of length {}", frame.data.len());
 
-        let mut file = fs::File::create(&Path::new(format!("frame-{}.jpg", i)));
+        let mut file = fs::File::create(&format!("frame-{}.jpg", i)).unwrap();
         file.write_all(frame.data).unwrap();
     }
 }

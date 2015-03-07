@@ -71,7 +71,7 @@ pub fn xioctl<T>(fd: Fd, request: usize, arg: &mut T) -> old_io::IoResult<()> {
 
         loop {
             ok = ll::ioctl(fd, request as c_ulong, argp as *mut c_void) != -1;
-            if ok || os::errno() != EINTR as usize {
+            if ok || os::errno() != EINTR {
                 break;
             }
         }

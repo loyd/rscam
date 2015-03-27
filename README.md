@@ -16,10 +16,10 @@ camera.start(&rscam::Config {
     ..Default::default()
 }).unwrap();
 
-for i in range(0u, 10) {
+for i in 0..10 {
     let frame = camera.capture().unwrap();
-    let mut file = fs::File::create(&Path::new(format!("frame-{}.jpg", i)));
-    file.write(frame.data).unwrap();
+    let mut file = fs::File::create(&format!("frame-{}.jpg", i)).unwrap();
+    file.write_all(frame.data).unwrap();
 }
 ```
 

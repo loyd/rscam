@@ -1,8 +1,5 @@
-#![feature(core)]
-
 extern crate rscam;
 
-use std::iter;
 use std::default::Default;
 
 fn main() {
@@ -15,7 +12,7 @@ fn main() {
         ..Default::default()
     }).unwrap();
 
-    for i in iter::count(1, 1) {
+    for i in 1.. {
         let frame = camera.capture().unwrap();
         println!("Frame #{} of length {}", i, frame.data.len());
     }

@@ -1,10 +1,10 @@
-#![feature(libc, std_misc, os, core, collections, old_io)]
+#![feature(libc, core, collections, io_ext, convert)]
 #![feature(unsafe_destructor)]
 
 extern crate libc;
 
-use std::{old_io, fmt, str, error, default, result};
-use std::os::unix::Fd;
+use std::{io, fmt, str, error, default, result};
+use std::os::unix::io::Fd;
 
 mod v4l2;
 
@@ -14,7 +14,7 @@ pub type Result<T> = result::Result<T, Error>;
 #[derive(Debug)]
 pub enum Error {
     /// I/O error when using the camera.
-    Io(old_io::IoError),
+    Io(io::Error),
     /// Unsupported frame interval.
     BadInterval,
     /// Unsupported resolution (width and/or height).
@@ -25,8 +25,8 @@ pub enum Error {
     BadField
 }
 
-impl error::FromError<old_io::IoError> for Error {
-    fn from_error(err: old_io::IoError) -> Error {
+impl error::FromError<io::Error> for Error {
+    fn from_error(err: io::Error) -> Error {
         Error::Io(err)
     }
 }
@@ -125,7 +125,7 @@ impl FormatInfo {
 
 impl fmt::Debug for FormatInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} ({}{})", str::from_utf8(self.format.as_slice()).unwrap(),
+        write!(f, "{} ({}{})", str::from_utf8(self.format.as_ref()).unwrap(),
             self.description, match (self.compressed, self.emulated) {
                 (true, true) => ", compressed, emulated",
                 (true, false) => ", compressed",
@@ -226,7 +226,7 @@ pub struct Camera<'a> {
 }
 
 impl<'a> Camera<'a> {
-    pub fn new(device: &str) -> old_io::IoResult<Camera> {
+    pub fn new(device: &str) -> io::Result<Camera> {
         Ok(Camera {
             fd: try!(v4l2::open(device)),
             state: State::Idle,
@@ -237,7 +237,7 @@ impl<'a> Camera<'a> {
     }
 
     /// Get detailed info about the available formats.
-    pub fn formats(&self) -> old_io::IoResult<Vec<FormatInfo>> {
+    pub fn formats(&self) -> io::Result<Vec<FormatInfo>> {
         let mut formats = vec![];
         let mut fmt = v4l2::FmtDesc::new();
 
@@ -335,7 +335,7 @@ impl<'a> Camera<'a> {
      * Start streaming.
      *
      * # Panics
-     * if recalled or called after `stop()`.
+     * If recalled or called after `stop()`.
      */
     pub fn start(&mut self, config: &Config) -> Result<()> {
         assert_eq!(self.state, State::Idle);
@@ -364,7 +364,7 @@ impl<'a> Camera<'a> {
      * # Panics
      * If called w/o streaming.
      */
-    pub fn capture(&self) -> old_io::IoResult<Frame> {
+    pub fn capture(&self) -> io::Result<Frame> {
         assert_eq!(self.state, State::Streaming);
 
         let mut buf = v4l2::Buffer::new();
@@ -387,7 +387,7 @@ impl<'a> Camera<'a> {
      * # Panics
      * If called w/o streaming.
      */
-    pub fn stop(&mut self) -> old_io::IoResult<()> {
+    pub fn stop(&mut self) -> io::Result<()> {
         assert_eq!(self.state, State::Streaming);
 
         try!(self.streamoff());
@@ -441,7 +441,7 @@ impl<'a> Camera<'a> {
 
         try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_REQBUFS, &mut req));
 
-        for i in range(0, nbuffers) {
+        for i in 0..nbuffers {
             let mut buf = v4l2::Buffer::new();
             buf.index = i;
             try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_QUERYBUF, &mut buf));
@@ -454,7 +454,7 @@ impl<'a> Camera<'a> {
         Ok(())
     }
 
-    fn free_buffers(&mut self) -> old_io::IoResult<()> {
+    fn free_buffers(&mut self) -> io::Result<()> {
         let mut res = Ok(());
 
         for buffer in self.buffers.iter_mut() {
@@ -467,8 +467,8 @@ impl<'a> Camera<'a> {
         res
     }
 
-    fn streamon(&self) -> old_io::IoResult<()> {
-        for i in range(0, self.buffers.len()) {
+    fn streamon(&self) -> io::Result<()> {
+        for i in 0..self.buffers.len() {
             let mut buf = v4l2::Buffer::new();
             buf.index = i as u32;
 
@@ -481,7 +481,7 @@ impl<'a> Camera<'a> {
         Ok(())
     }
 
-    fn streamoff(&mut self) -> old_io::IoResult<()> {
+    fn streamoff(&mut self) -> io::Result<()> {
         let mut typ = v4l2::BUF_TYPE_VIDEO_CAPTURE;
         try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_STREAMOFF, &mut typ));
 
@@ -502,6 +502,6 @@ impl<'a> Drop for Camera<'a> {
 }
 
 /// Alias for `Camera::new()`.
-pub fn new(device: &str) -> old_io::IoResult<Camera> {
+pub fn new(device: &str) -> io::Result<Camera> {
     Camera::new(device)
 }

@@ -1,6 +1,7 @@
-use std::{io, raw, mem};
-use std::os::unix::io::Fd;
 use std::ffi::CString;
+use std::os::unix::io::RawFd;
+use std::usize;
+use std::{io, raw, mem};
 
 // C types and constants.
 use libc::{c_void, c_ulong, size_t, off_t};
@@ -11,7 +12,7 @@ use libc::consts::os::posix88::{MAP_SHARED};
 
 #[cfg(feature = "use_wrapper")]
 mod ll {
-    use std::os::unix::io::Fd;
+    use std::os::unix::io::RawFd;
     use libc::{c_void, c_char, c_int, c_ulong, size_t, off_t};
 
     pub use self::v4l2_open as open;
@@ -22,24 +23,24 @@ mod ll {
 
     #[link(name = "v4l2")]
     extern {
-        pub fn v4l2_open(file: *const c_char, flags: c_int, arg: c_int) -> Fd;
-        pub fn v4l2_close(fd: Fd) -> c_int;
-        pub fn v4l2_ioctl(fd: Fd, request: c_ulong, argp: *mut c_void) -> c_int;
+        pub fn v4l2_open(file: *const c_char, flags: c_int, arg: c_int) -> RawFd;
+        pub fn v4l2_close(fd: RawFd) -> c_int;
+        pub fn v4l2_ioctl(fd: RawFd, request: c_ulong, argp: *mut c_void) -> c_int;
         pub fn v4l2_mmap(start: *mut c_void, length: size_t, prot: c_int,
-                     flags: c_int, fd: Fd, offset: off_t) -> *mut c_void;
+                     flags: c_int, fd: RawFd, offset: off_t) -> *mut c_void;
         pub fn v4l2_munmap(start: *mut c_void, length: size_t) -> c_int;
     }
 }
 
 #[cfg(not(feature = "use_wrapper"))]
 mod ll {
-    use std::os::unix::io::Fd;
+    use std::os::unix::io::RawFd;
     use libc::{c_void, c_int, c_ulong};
 
     pub use libc::{open, close, mmap, munmap};
 
     extern {
-        pub fn ioctl(fd: Fd, request: c_ulong, argp: *mut c_void) -> c_int;
+        pub fn ioctl(fd: RawFd, request: c_ulong, argp: *mut c_void) -> c_int;
     }
 }
 
@@ -48,19 +49,19 @@ macro_rules! check(
         (try!(if $cond { Ok(()) } else { Err(io::Error::last_os_error()) }))
 );
 
-pub fn open(file: &str) -> io::Result<Fd> {
+pub fn open(file: &str) -> io::Result<RawFd> {
     let c_str = try!(CString::new(file));
     let fd = unsafe { ll::open(c_str.as_ptr(), O_RDWR, 0) };
     check!(fd != -1);
     Ok(fd)
 }
 
-pub fn close(fd: Fd) -> io::Result<()> {
+pub fn close(fd: RawFd) -> io::Result<()> {
     check!(unsafe { ll::close(fd) != -1 });
     Ok(())
 }
 
-pub fn xioctl<T>(fd: Fd, request: usize, arg: &mut T) -> io::Result<()> {
+pub fn xioctl<T>(fd: RawFd, request: usize, arg: &mut T) -> io::Result<()> {
     let argp: *mut T = arg;
 
     check!(unsafe {
@@ -79,7 +80,7 @@ pub fn xioctl<T>(fd: Fd, request: usize, arg: &mut T) -> io::Result<()> {
     Ok(())
 }
 
-pub fn xioctl_valid<T>(fd: Fd, request: usize, arg: &mut T) ->io::Result<bool> {
+pub fn xioctl_valid<T>(fd: RawFd, request: usize, arg: &mut T) ->io::Result<bool> {
     match xioctl(fd, request, arg) {
         Err(ref err) if err.kind() == io::ErrorKind::InvalidInput => Ok(false),
         Err(err) => Err(err),
@@ -87,11 +88,11 @@ pub fn xioctl_valid<T>(fd: Fd, request: usize, arg: &mut T) ->io::Result<bool> {
     }
 }
 
-pub fn mmap<'a>(length: usize, fd: Fd, offset: usize) -> io::Result<&'a mut [u8]> {
+pub fn mmap<'a>(length: usize, fd: RawFd, offset: usize) -> io::Result<&'a mut [u8]> {
     let ptr = unsafe { ll::mmap(0 as *mut c_void, length as size_t, PROT_READ|PROT_WRITE,
-                                 MAP_SHARED, fd, offset as off_t) as *mut u8 };
+                                 MAP_SHARED, fd, offset as off_t)};
 
-    check!(ptr != -1 as *mut u8);
+    check!(ptr as usize != usize::MAX);
     Ok(unsafe { mem::transmute(raw::Slice { data: ptr, len: length}) })
 }
 

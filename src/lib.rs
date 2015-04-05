@@ -1,10 +1,10 @@
-#![feature(libc, core, collections, io_ext, convert)]
-#![feature(unsafe_destructor)]
+#![feature(libc, core, collections)]
 
 extern crate libc;
 
-use std::{io, fmt, str, error, default, result};
-use std::os::unix::io::Fd;
+use std::convert::From;
+use std::os::unix::io::RawFd;
+use std::{io, fmt, str, default, result};
 
 mod v4l2;
 
@@ -25,14 +25,14 @@ pub enum Error {
     BadField
 }
 
-impl error::FromError<io::Error> for Error {
-    fn from_error(err: io::Error) -> Error {
+impl From<io::Error> for Error {
+    fn from(err: io::Error) -> Error {
         Error::Io(err)
     }
 }
 
 /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/field-order.html#v4l2-field).
-#[derive(Copy)]
+#[derive(Copy, Clone)]
 #[repr(C)]
 pub enum Field {
     None = 1,
@@ -46,7 +46,6 @@ pub enum Field {
     InterplacedBT
 }
 
-#[derive(Copy)]
 pub struct Config<'a> {
     /**
      * The mix of numerator and denominator. v4l2 uses frame intervals instead of frame rates.
@@ -198,15 +197,13 @@ pub struct Frame<'a> {
     pub resolution: (u32, u32),
     /// FourCC of the format.
     pub format: [u8; 4],
-    fd: Fd,
+    fd: RawFd,
     buffer: v4l2::Buffer
 }
 
-#[unsafe_destructor]
 impl<'a> Drop for Frame<'a> {
-    #[allow(unused_must_use)]
     fn drop(&mut self) {
-        v4l2::xioctl(self.fd, v4l2::VIDIOC_QBUF, &mut self.buffer);
+        let _ = v4l2::xioctl(self.fd, v4l2::VIDIOC_QBUF, &mut self.buffer);
     }
 }
 
@@ -218,7 +215,7 @@ enum State {
 }
 
 pub struct Camera<'a> {
-    fd: Fd,
+    fd: RawFd,
     state: State,
     resolution: (u32, u32),
     format: [u8; 4],
@@ -489,15 +486,13 @@ impl<'a> Camera<'a> {
     }
 }
 
-#[unsafe_destructor]
 impl<'a> Drop for Camera<'a> {
-    #[allow(unused_must_use)]
     fn drop(&mut self) {
         if self.state == State::Streaming {
-            self.stop();
+            let _ = self.stop();
         }
 
-        v4l2::close(self.fd);
+        let _ = v4l2::close(self.fd);
     }
 }
 

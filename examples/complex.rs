@@ -4,6 +4,7 @@ use std::default::Default;
 use std::fs;
 use std::io::Write;
 
+
 fn main() {
     let mut camera = rscam::new("/dev/video0").unwrap();
 

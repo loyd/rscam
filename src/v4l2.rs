@@ -10,7 +10,7 @@ use libc::{O_RDWR, PROT_READ, PROT_WRITE};
 use libc::consts::os::posix88::{MAP_SHARED};
 
 
-#[cfg(feature = "use_wrapper")]
+#[cfg(not(feature = "no_wrapper"))]
 mod ll {
     use std::os::unix::io::RawFd;
     use libc::{c_void, c_char, c_int, c_ulong, size_t, off_t};
@@ -32,7 +32,7 @@ mod ll {
     }
 }
 
-#[cfg(not(feature = "use_wrapper"))]
+#[cfg(feature = "no_wrapper")]
 mod ll {
     use std::os::unix::io::RawFd;
     use libc::{c_void, c_int, c_ulong};

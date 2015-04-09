@@ -22,9 +22,8 @@
 //! }
 //! ```
 //!
-//! Default feature `use_wrapper` enables the v4l2 wrapper
-//! (e.g. `v4l2_ioctl()` instead of `ioctl()`).
-//! In this case, there is dependence on *libv4l2*.
+//! The wrapper uses v4l2 (e.g. `v4l2_ioctl()` instead of `ioctl()`) until feature `no_wrapper` is
+//! enabled. The feature can be useful when it's desirable to avoid dependence on *libv4l2*.
 
 #![feature(libc, core, collections, unique)]
 

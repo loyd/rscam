@@ -12,5 +12,4 @@ readme = "README.md"
 
 [features]
 
-default = ["use_wrapper"]
-use_wrapper = []
+no_wrapper = []

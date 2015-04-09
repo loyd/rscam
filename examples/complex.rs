@@ -26,6 +26,6 @@ fn main() {
         println!("Frame of length {}", frame.len());
 
         let mut file = fs::File::create(&format!("frame-{}.jpg", i)).unwrap();
-        file.write_all(frame.data).unwrap();
+        file.write_all(&frame[..]).unwrap();
     }
 }

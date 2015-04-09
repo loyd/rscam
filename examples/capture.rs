@@ -14,6 +14,6 @@ fn main() {
 
     for i in 1.. {
         let frame = camera.capture().unwrap();
-        println!("Frame #{} of length {}", i, frame.data.len());
+        println!("Frame #{} of length {}", i, frame.len());
     }
 }

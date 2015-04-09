@@ -1,8 +1,8 @@
 extern crate rscam;
 
+use std::default::Default;
 use std::fs;
 use std::io::Write;
-use std::default::Default;
 
 fn main() {
     let mut camera = rscam::new("/dev/video0").unwrap();
@@ -22,7 +22,7 @@ fn main() {
     for i in 0..10 {
         let frame = camera.capture().unwrap();
 
-        println!("Frame of length {}", frame.data.len());
+        println!("Frame of length {}", frame.len());
 
         let mut file = fs::File::create(&format!("frame-{}.jpg", i)).unwrap();
         file.write_all(frame.data).unwrap();

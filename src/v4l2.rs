@@ -1,7 +1,7 @@
 use std::ffi::CString;
 use std::os::unix::io::RawFd;
-use std::usize;
-use std::{io, raw, mem};
+use std::ptr::Unique;
+use std::{io, mem, usize};
 
 // C types and constants.
 use libc::{c_void, c_ulong, size_t, off_t};
@@ -88,21 +88,25 @@ pub fn xioctl_valid<T>(fd: RawFd, request: usize, arg: &mut T) ->io::Result<bool
     }
 }
 
-pub fn mmap<'a>(length: usize, fd: RawFd, offset: usize) -> io::Result<&'a mut [u8]> {
+pub struct MappedRegion {
+    pub ptr: Unique<u8>,
+    pub len: usize
+}
+
+impl Drop for MappedRegion {
+    fn drop(&mut self) {
+        unsafe { ll::munmap(*self.ptr as *mut c_void, self.len as size_t); }
+    }
+}
+
+pub fn mmap(length: usize, fd: RawFd, offset: usize) -> io::Result<MappedRegion> {
     let ptr = unsafe { ll::mmap(0 as *mut c_void, length as size_t, PROT_READ|PROT_WRITE,
                                  MAP_SHARED, fd, offset as off_t)};
 
     check!(ptr as usize != usize::MAX);
-    Ok(unsafe { mem::transmute(raw::Slice { data: ptr, len: length}) })
-}
-
-#[allow(trivial_casts)]
-pub fn munmap(region: &mut [u8]) -> io::Result<()> {
-    check!(unsafe {
-        ll::munmap(&mut region[0] as *mut u8 as *mut c_void, region.len() as size_t) == 0
-    });
-
-    Ok(())
+    Ok(unsafe {
+        MappedRegion { ptr: Unique::new(ptr as *mut u8), len: length }
+    })
 }
 
 #[repr(C)]

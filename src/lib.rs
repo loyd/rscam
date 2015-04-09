@@ -1,12 +1,18 @@
-#![feature(libc, core, collections)]
+#![feature(libc, core, collections, unique)]
 
 extern crate libc;
 
+mod v4l2;
+
 use std::convert::From;
+use std::intrinsics;
+use std::ops::Deref;
 use std::os::unix::io::RawFd;
+use std::slice;
+use std::sync::Arc;
 use std::{io, fmt, str, default, result};
 
-mod v4l2;
+use v4l2::MappedRegion;
 
 
 pub type Result<T> = result::Result<T, Error>;
@@ -190,18 +196,31 @@ impl fmt::Debug for IntervalInfo {
     }
 }
 
-pub struct Frame<'a> {
-    /// Slice of one of the buffers.
-    pub data: &'a [u8],
+pub struct Frame {
     /// Width and height of the frame.
     pub resolution: (u32, u32),
     /// FourCC of the format.
     pub format: [u8; 4],
+
+    region: Arc<MappedRegion>,
+    length: u32,
     fd: RawFd,
     buffer: v4l2::Buffer
 }
 
-impl<'a> Drop for Frame<'a> {
+impl Deref for Frame {
+    type Target = [u8];
+
+    fn deref(&self) -> &[u8] {
+        unsafe {
+            let p = *self.region.ptr;
+            intrinsics::assume(!p.is_null());
+            slice::from_raw_parts(p, self.length as usize)
+        }
+    }
+}
+
+impl Drop for Frame {
     fn drop(&mut self) {
         let _ = v4l2::xioctl(self.fd, v4l2::VIDIOC_QBUF, &mut self.buffer);
     }
@@ -214,15 +233,15 @@ enum State {
     Aborted
 }
 
-pub struct Camera<'a> {
+pub struct Camera {
     fd: RawFd,
     state: State,
     resolution: (u32, u32),
     format: [u8; 4],
-    buffers: Vec<&'a mut [u8]>
+    buffers: Vec<Arc<MappedRegion>>
 }
 
-impl<'a> Camera<'a> {
+impl Camera {
     pub fn new(device: &str) -> io::Result<Camera> {
         Ok(Camera {
             fd: try!(v4l2::open(device)),
@@ -342,7 +361,7 @@ impl<'a> Camera<'a> {
         try!(self.alloc_buffers(config.nbuffers));
 
         if let Err(err) = self.streamon() {
-            let _ = self.free_buffers();
+            self.free_buffers();
             return Err(Error::Io(err));
         }
 
@@ -370,9 +389,10 @@ impl<'a> Camera<'a> {
         assert!(buf.index < self.buffers.len() as u32);
 
         Ok(Frame {
-            data: &self.buffers[buf.index as usize][..buf.bytesused as usize],
             resolution: self.resolution,
             format: self.format,
+            region: self.buffers[buf.index as usize].clone(),
+            length: buf.bytesused,
             fd: self.fd,
             buffer: buf
         })
@@ -388,7 +408,7 @@ impl<'a> Camera<'a> {
         assert_eq!(self.state, State::Streaming);
 
         try!(self.streamoff());
-        try!(self.free_buffers());
+        self.free_buffers();
 
         self.state = State::Aborted;
 
@@ -444,24 +464,14 @@ impl<'a> Camera<'a> {
             try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_QUERYBUF, &mut buf));
 
             let region = try!(v4l2::mmap(buf.length as usize, self.fd, buf.m));
-
-            self.buffers.push(region);
+            self.buffers.push(Arc::new(region));
         }
 
         Ok(())
     }
 
-    fn free_buffers(&mut self) -> io::Result<()> {
-        let mut res = Ok(());
-
-        for buffer in self.buffers.iter_mut() {
-            if let (&Ok(_), Err(err)) = (&res, v4l2::munmap(*buffer)) {
-                res = Err(err);
-            }
-        }
-
+    fn free_buffers(&mut self) {
         self.buffers.clear();
-        res
     }
 
     fn streamon(&self) -> io::Result<()> {
@@ -486,7 +496,7 @@ impl<'a> Camera<'a> {
     }
 }
 
-impl<'a> Drop for Camera<'a> {
+impl Drop for Camera {
     fn drop(&mut self) {
         if self.state == State::Streaming {
             let _ = self.stop();

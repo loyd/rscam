@@ -81,30 +81,20 @@ pub enum Field {
 }
 
 pub struct Config<'a> {
-    /**
-     * The mix of numerator and denominator. v4l2 uses frame intervals instead of frame rates.
-     * Default is `(1, 10)`.
-     */
+    /// The mix of numerator and denominator. v4l2 uses frame intervals instead of frame rates.
+    /// Default is `(1, 10)`.
     pub interval: (u32, u32),
-    /**
-     * Width and height of frame.
-     * Default is `(640, 480)`.
-     */
+    /// Width and height of frame.
+    /// Default is `(640, 480)`.
     pub resolution: (u32, u32),
-    /**
-     * FourCC of format (e.g. `b"RGB3"`). Note that case matters.
-     * Default is `b"YUYV"`.
-     */
+    /// FourCC of format (e.g. `b"RGB3"`). Note that case matters.
+    /// Default is `b"YUYV"`.
     pub format: &'a [u8],
-    /**
-     * Storage method of interlaced video.
-     * Default is `Field::None` (progressive).
-     */
+    /// Storage method of interlaced video.
+    /// Default is `Field::None` (progressive).
     pub field: Field,
-    /**
-     * Number of buffers in the queue of camera.
-     * Default is `2`.
-     */
+    /// Number of buffers in the queue of camera.
+    /// Default is `2`.
     pub nbuffers: u32
 }
 
@@ -375,12 +365,10 @@ impl Camera {
         }
     }
 
-    /**
-     * Start streaming.
-     *
-     * # Panics
-     * If recalled or called after `stop()`.
-     */
+    /// Start streaming.
+    ///
+    /// # Panics
+    /// If recalled or called after `stop()`.
     pub fn start(&mut self, config: &Config) -> Result<()> {
         assert_eq!(self.state, State::Idle);
 
@@ -401,13 +389,11 @@ impl Camera {
         Ok(())
     }
 
-    /**
-     * Blocking request of frame.
-     * It dequeues buffer from a driver, which will be enqueueed after destructing `Frame`.
-     *
-     * # Panics
-     * If called w/o streaming.
-     */
+    /// Blocking request of frame.
+    /// It dequeues buffer from a driver, which will be enqueueed after destructing `Frame`.
+    ///
+    /// # Panics
+    /// If called w/o streaming.
     pub fn capture(&self) -> io::Result<Frame> {
         assert_eq!(self.state, State::Streaming);
 
@@ -426,12 +412,10 @@ impl Camera {
         })
     }
 
-    /**
-     * Stop streaming.
-     *
-     * # Panics
-     * If called w/o streaming.
-     */
+    /// Stop streaming. Otherwise it's called after destructing `Camera`.
+    ///
+    /// # Panics
+    /// If called w/o streaming.
     pub fn stop(&mut self) -> io::Result<()> {
         assert_eq!(self.state, State::Streaming);
 

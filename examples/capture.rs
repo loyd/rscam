@@ -1,7 +1,5 @@
 extern crate rscam;
 
-use std::default::Default;
-
 
 fn main() {
     let mut camera = rscam::new("/dev/video0").unwrap();

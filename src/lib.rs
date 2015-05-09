@@ -1,7 +1,6 @@
 //! Fast wrapper for v4l2.
 //!
 //! ```
-//! # use std::default::Default;
 //! # use std::fs;
 //! # use std::io::Write;
 //! use rscam::{Camera, Config};
@@ -37,7 +36,7 @@ use std::ops::Deref;
 use std::os::unix::io::RawFd;
 use std::slice;
 use std::sync::Arc;
-use std::{io, fmt, str, default, result};
+use std::{io, fmt, str, result};
 
 use v4l2::MappedRegion;
 
@@ -97,7 +96,7 @@ pub struct Config<'a> {
     pub nbuffers: u32
 }
 
-impl<'a> default::Default for Config<'a> {
+impl<'a> Default for Config<'a> {
     fn default() -> Config<'a> {
         Config {
             interval: (1, 10),

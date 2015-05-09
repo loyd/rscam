@@ -1,6 +1,5 @@
 extern crate rscam;
 
-use std::default::Default;
 use std::fs;
 use std::io::Write;
 

@@ -24,14 +24,11 @@
 //! The wrapper uses v4l2 (e.g. `v4l2_ioctl()` instead of `ioctl()`) until feature `no_wrapper` is
 //! enabled. The feature can be useful when it's desirable to avoid dependence on *libv4l2*.
 
-#![feature(libc, core, collections, unique)]
-
 extern crate libc;
 
 mod v4l2;
 
 use std::convert::From;
-use std::intrinsics;
 use std::ops::Deref;
 use std::os::unix::io::RawFd;
 use std::slice;
@@ -129,7 +126,8 @@ impl FormatInfo {
                 (fourcc >> 24 & 0xff) as u8
             ],
 
-            description: String::from_utf8_lossy(match desc.position_elem(&0) {
+            // Instead unstable `position_elem()`.
+            description: String::from_utf8_lossy(match desc.iter().position(|&c| c == 0) {
                 Some(x) => &desc[..x],
                 None    => desc
             }).into_owned(),
@@ -228,11 +226,7 @@ impl Deref for Frame {
     type Target = [u8];
 
     fn deref(&self) -> &[u8] {
-        unsafe {
-            let p = *self.region.ptr;
-            intrinsics::assume(!p.is_null());
-            slice::from_raw_parts(p, self.length as usize)
-        }
+        unsafe { slice::from_raw_parts(self.region.ptr, self.length as usize) }
     }
 }
 

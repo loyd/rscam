@@ -1,6 +1,5 @@
 use std::ffi::CString;
 use std::os::unix::io::RawFd;
-use std::ptr::Unique;
 use std::{io, mem, usize};
 
 // C types and constants.
@@ -89,9 +88,12 @@ pub fn xioctl_valid<T>(fd: RawFd, request: usize, arg: &mut T) ->io::Result<bool
 }
 
 pub struct MappedRegion {
-    pub ptr: Unique<u8>,
+    pub ptr: *mut u8,
     pub len: usize
 }
+
+// Instead unstable `Unique<u8>`.
+unsafe impl Send for MappedRegion {}
 
 impl Drop for MappedRegion {
     fn drop(&mut self) {
@@ -104,9 +106,7 @@ pub fn mmap(length: usize, fd: RawFd, offset: usize) -> io::Result<MappedRegion>
                                  MAP_SHARED, fd, offset as off_t)};
 
     check!(ptr as usize != usize::MAX);
-    Ok(unsafe {
-        MappedRegion { ptr: Unique::new(ptr as *mut u8), len: length }
-    })
+    Ok(MappedRegion { ptr: ptr as *mut u8, len: length })
 }
 
 #[repr(C)]

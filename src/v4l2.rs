@@ -94,6 +94,7 @@ pub struct MappedRegion {
 
 // Instead unstable `Unique<u8>`.
 unsafe impl Send for MappedRegion {}
+unsafe impl Sync for MappedRegion {}
 
 impl Drop for MappedRegion {
     fn drop(&mut self) {
@@ -103,7 +104,7 @@ impl Drop for MappedRegion {
 
 pub fn mmap(length: usize, fd: RawFd, offset: usize) -> io::Result<MappedRegion> {
     let ptr = unsafe { ll::mmap(0 as *mut c_void, length as size_t, PROT_READ|PROT_WRITE,
-                                 MAP_SHARED, fd, offset as off_t)};
+                                MAP_SHARED, fd, offset as off_t)};
 
     check!(ptr as usize != usize::MAX);
     Ok(MappedRegion { ptr: ptr as *mut u8, len: length })
@@ -345,14 +346,12 @@ impl Frmsizeenum {
     }
 }
 
-#[allow(dead_code)]
 #[repr(C)]
 pub struct FrmsizeDiscrete {
     pub width: u32,
     pub height: u32
 }
 
-#[allow(dead_code)]
 #[repr(C)]
 pub struct FrmsizeStepwise {
     pub min_width: u32,
@@ -396,7 +395,6 @@ impl Frmivalenum {
     }
 }
 
-#[allow(dead_code)]
 #[repr(C)]
 pub struct FrmivalStepwise {
     pub min: Fract,

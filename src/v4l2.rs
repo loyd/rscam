@@ -43,7 +43,7 @@ mod ll {
     }
 }
 
-macro_rules! check(
+macro_rules! check_io(
     ($cond:expr) =>
         (try!(if $cond { Ok(()) } else { Err(io::Error::last_os_error()) }))
 );
@@ -51,19 +51,19 @@ macro_rules! check(
 pub fn open(file: &str) -> io::Result<RawFd> {
     let c_str = try!(CString::new(file));
     let fd = unsafe { ll::open(c_str.as_ptr(), O_RDWR, 0) };
-    check!(fd != -1);
+    check_io!(fd != -1);
     Ok(fd)
 }
 
 pub fn close(fd: RawFd) -> io::Result<()> {
-    check!(unsafe { ll::close(fd) != -1 });
+    check_io!(unsafe { ll::close(fd) != -1 });
     Ok(())
 }
 
 pub fn xioctl<T>(fd: RawFd, request: usize, arg: &mut T) -> io::Result<()> {
     let argp: *mut T = arg;
 
-    check!(unsafe {
+    check_io!(unsafe {
         let mut ok;
 
         loop {
@@ -92,7 +92,7 @@ pub struct MappedRegion {
     pub len: usize
 }
 
-// Instead unstable `Unique<u8>`.
+// Instead of unstable `Unique<u8>`.
 unsafe impl Send for MappedRegion {}
 unsafe impl Sync for MappedRegion {}
 
@@ -106,7 +106,7 @@ pub fn mmap(length: usize, fd: RawFd, offset: usize) -> io::Result<MappedRegion>
     let ptr = unsafe { ll::mmap(0 as *mut c_void, length as size_t, PROT_READ|PROT_WRITE,
                                 MAP_SHARED, fd, offset as off_t)};
 
-    check!(ptr as usize != usize::MAX);
+    check_io!(ptr as usize != usize::MAX);
     Ok(MappedRegion { ptr: ptr as *mut u8, len: length })
 }
 
@@ -157,19 +157,12 @@ pub struct PixFormat {
 
 impl PixFormat {
     pub fn new(resolution: (u32, u32), fourcc: u32, field: u32) -> PixFormat {
-        PixFormat {
-            width: resolution.0,
-            height: resolution.1,
-            pixelformat: fourcc,
-            field: field,
-            bytesperline: 0,
-            sizeimage: 0,
-            colorspace: 0,
-            private: 0,
-            flags: 0,
-            ycbcr_enc: 0,
-            quantization: 0
-        }
+        let mut pix_fmt: PixFormat = unsafe { mem::zeroed() };
+        pix_fmt.width = resolution.0;
+        pix_fmt.height = resolution.1;
+        pix_fmt.pixelformat = fourcc;
+        pix_fmt.field = field;
+        pix_fmt
     }
 }
 
@@ -211,32 +204,10 @@ pub struct Buffer {
 
 impl Buffer {
     pub fn new() -> Buffer {
-        Buffer {
-            index: 0,
-            btype: BUF_TYPE_VIDEO_CAPTURE,
-            bytesused: 0,
-            flags: 0,
-            field: 0,
-            timestamp: Timeval {
-                tv_sec: 0,
-                tv_usec: 0
-            },
-            timecode: TimeCode {
-                ttype: 0,
-                flags: 0,
-                frames: 0,
-                seconds: 0,
-                minutes: 0,
-                hours: 0,
-                userbits: [0; 4]
-            },
-            sequence: 0,
-            memory: MEMORY_MMAP,
-            m: 0,
-            length: 0,
-            input: 0,
-            reserved: 0
-        }
+        let mut buf: Buffer = unsafe { mem::zeroed() };
+        buf.btype = BUF_TYPE_VIDEO_CAPTURE;
+        buf.memory = MEMORY_MMAP;
+        buf
     }
 }
 
@@ -263,14 +234,9 @@ pub struct FmtDesc {
 
 impl FmtDesc {
     pub fn new() -> FmtDesc {
-        FmtDesc {
-            index: 0,
-            ftype: BUF_TYPE_VIDEO_CAPTURE,
-            flags: 0,
-            description: [0; 32],
-            pixelformat: 0,
-            reserved: [0; 4]
-        }
+        let mut desc: FmtDesc = unsafe { mem::zeroed() };
+        desc.ftype = BUF_TYPE_VIDEO_CAPTURE;
+        desc
     }
 }
 
@@ -283,21 +249,11 @@ pub struct StreamParm {
 
 impl StreamParm {
     pub fn new(interval: (u32, u32)) -> StreamParm {
-        StreamParm {
-            ptype: BUF_TYPE_VIDEO_CAPTURE,
-            parm: CaptureParm {
-                capability: 0,
-                capturemode: 0,
-                timeperframe: Fract {
-                    numerator: interval.0,
-                    denominator: interval.1
-                },
-                extendedmode: 0,
-                readbuffers: 0,
-                reserved: [0; 4]
-            },
-            space: [0; 160]
-        }
+        let mut parm: StreamParm = unsafe { mem::zeroed() };
+        parm.ptype = BUF_TYPE_VIDEO_CAPTURE;
+        parm.parm.timeperframe.numerator = interval.0;
+        parm.parm.timeperframe.denominator = interval.1;
+        parm
     }
 }
 
@@ -328,13 +284,9 @@ pub struct Frmsizeenum {
 
 impl Frmsizeenum {
     pub fn new(fourcc: u32) -> Frmsizeenum {
-        Frmsizeenum {
-            index: 0,
-            pixelformat: fourcc,
-            ftype: 0,
-            data: [0; 6],
-            reserved: [0; 2]
-        }
+        let mut size: Frmsizeenum = unsafe { mem::zeroed() };
+        size.pixelformat = fourcc;
+        size
     }
 
     pub fn discrete(&mut self) -> &mut FrmsizeDiscrete {
@@ -375,15 +327,11 @@ pub struct Frmivalenum {
 
 impl Frmivalenum {
     pub fn new(fourcc: u32, resolution: (u32, u32)) -> Frmivalenum {
-        Frmivalenum {
-            index: 0,
-            pixelformat: fourcc,
-            width: resolution.0,
-            height: resolution.1,
-            ftype: 0,
-            data: [0; 6],
-            reserved: [0; 2]
-        }
+        let mut ival: Frmivalenum = unsafe { mem::zeroed() };
+        ival.pixelformat = fourcc;
+        ival.width = resolution.0;
+        ival.height = resolution.1;
+        ival
     }
 
     pub fn discrete(&mut self) -> &mut Fract {

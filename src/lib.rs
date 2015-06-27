@@ -1,6 +1,6 @@
 //! Fast wrapper for v4l2.
 //!
-//! ```
+//! ```no_run
 //! # use std::fs;
 //! # use std::io::Write;
 //! use rscam::{Camera, Config};
@@ -126,7 +126,7 @@ impl FormatInfo {
                 (fourcc >> 24 & 0xff) as u8
             ],
 
-            // Instead unstable `position_elem()`.
+            // Instead of unstable `position_elem()`.
             description: String::from_utf8_lossy(match desc.iter().position(|&c| c == 0) {
                 Some(x) => &desc[..x],
                 None    => desc

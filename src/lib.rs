@@ -37,6 +37,18 @@ use std::{io, fmt, str, result};
 
 use v4l2::MappedRegion;
 
+/// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/vidioc-queryctrl.html#control-flags)
+pub use v4l2::CTRL_FLAG_DISABLED as FLAG_DISABLED;
+pub use v4l2::CTRL_FLAG_GRABBED as FLAG_GRABBED;
+pub use v4l2::CTRL_FLAG_READ_ONLY as FLAG_READ_ONLY;
+pub use v4l2::CTRL_FLAG_UPDATE as FLAG_UPDATE;
+pub use v4l2::CTRL_FLAG_INACTIVE as FLAG_INACTIVE;
+pub use v4l2::CTRL_FLAG_SLIDER as FLAG_SLIDER;
+pub use v4l2::CTRL_FLAG_WRITE_ONLY as FLAG_WRITE_ONLY;
+pub use v4l2::CTRL_FLAG_VOLATILE as FLAG_VOLATILE;
+pub use v4l2::CTRL_FLAG_HAS_PAYLOAD as FLAG_HAS_PAYLOAD;
+pub use v4l2::CTRL_FLAG_EXECUTE_ON_WRITE as FLAG_EXECUTE_ON_WRITE;
+
 
 pub type Result<T> = result::Result<T, Error>;
 
@@ -125,13 +137,7 @@ impl FormatInfo {
                 (fourcc >> 16 & 0xff) as u8,
                 (fourcc >> 24 & 0xff) as u8
             ],
-
-            // Instead of unstable `position_elem()`.
-            description: String::from_utf8_lossy(match desc.iter().position(|&c| c == 0) {
-                Some(x) => &desc[..x],
-                None    => desc
-            }).into_owned(),
-
+            description: buffer_to_string(desc),
             compressed: flags & v4l2::FMT_FLAG_COMPRESSED != 0,
             emulated: flags & v4l2::FMT_FLAG_EMULATED != 0
         }
@@ -357,6 +363,79 @@ impl Camera {
         }
     }
 
+    pub fn controls(&self) -> io::Result<Vec<Control>> {
+        let mut controls = vec![];
+
+        for id in v4l2::CID_BASE..v4l2::CID_LASTP1 {
+            match self.get_control_by_id(id) {
+                Ok(ref ctrl) if ctrl.flags & FLAG_DISABLED > 0 => {},
+                Ok(ctrl) => controls.push(ctrl),
+                Err(ref err) if err.kind() == io::ErrorKind::InvalidInput => {},
+                Err(err) => return Err(err)
+            }
+        }
+
+        for id in v4l2::CID_PRIVATE_BASE.. {
+            match self.get_control_by_id(id) {
+                Ok(ref ctrl) if ctrl.flags & FLAG_DISABLED > 0 => {},
+                Ok(ctrl) => controls.push(ctrl),
+                Err(ref err) if err.kind() == io::ErrorKind::InvalidInput => break,
+                Err(err) => return Err(err)
+            }
+        }
+
+        Ok(controls)
+    }
+
+    pub fn get_control_by_id(&self, id: u32) -> io::Result<Control> {
+        let mut qctrl = v4l2::QueryCtrl::new();
+        qctrl.id = id;
+
+        try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_QUERYCTRL, &mut qctrl));
+
+        let data = match qctrl.qtype {
+            v4l2::CTRL_TYPE_INTEGER => CtrlData::Integer {
+                value: 0,
+                default: qctrl.default_value,
+                minimum: qctrl.minimum,
+                maximum: qctrl.maximum,
+                step: qctrl.step
+            },
+            v4l2::CTRL_TYPE_BOOLEAN => CtrlData::Boolean {
+                value: false,
+                default: qctrl.default_value != 0
+            },
+            v4l2::CTRL_TYPE_MENU => CtrlData::Menu {
+                value: 0,
+                default: qctrl.default_value as u32,
+                items: {
+                    let mut items = vec![];
+                    let mut qmenu = v4l2::QueryMenu::new();
+                    qmenu.id = id;
+                    for index in (qctrl.minimum..qctrl.maximum+1) {
+                        qmenu.index = index as u32;
+                        if try!(v4l2::xioctl_valid(self.fd, v4l2::VIDIOC_QUERYMENU, &mut qmenu)) {
+                            items.push(CtrlMenuItem {
+                                index: index as u32,
+                                name: buffer_to_string(&qmenu.name)
+                            });
+                        }
+                    }
+                    items
+                }
+            },
+            v4l2::CTRL_TYPE_BUTTON => CtrlData::Button,
+            _ => CtrlData::Unknown
+        };
+
+        Ok(Control {
+            id: id,
+            name: buffer_to_string(&qctrl.name),
+            data: data,
+            flags: qctrl.flags
+        })
+    }
+
     /// Start streaming.
     ///
     /// # Panics
@@ -508,6 +587,75 @@ impl Drop for Camera {
 
         let _ = v4l2::close(self.fd);
     }
+}
+
+pub struct Control {
+    pub id: u32,
+    pub name: String,
+    pub data: CtrlData,
+    pub flags: u32,
+}
+
+pub enum CtrlData {
+    Integer {
+        value: i32,
+        default: i32,
+        minimum: i32,
+        maximum: i32,
+        step: i32
+    },
+    Boolean {
+        value: bool,
+        default: bool
+    },
+    Menu {
+        value: u32,
+        default: u32,
+        items: Vec<CtrlMenuItem>
+    },
+    IntegerMenu {
+        value: u32,
+        default: u32,
+        items: Vec<CtrlIntMenuItem>
+    },
+    Bitmask {
+        value: u32,
+        default: u32,
+        maximum: u32
+    },
+    Integer64 {
+        value: i64,
+        default: i64,
+        minimum: i64,
+        maximum: i64,
+        step: i64
+    },
+    String {
+        value: String,
+        minimum: u32,
+        maximum: u32,
+        step: u32
+    },
+    Button,
+    Unknown
+}
+
+pub struct CtrlMenuItem {
+    pub index: u32,
+    pub name: String
+}
+
+pub struct CtrlIntMenuItem {
+    pub index: u32,
+    pub value: i64
+}
+
+fn buffer_to_string(buf: &[u8]) -> String {
+    // Instead of unstable `position_elem()`.
+    String::from_utf8_lossy(match buf.iter().position(|&c| c == 0) {
+        Some(x) => &buf[..x],
+        None    => buf
+    }).into_owned()
 }
 
 /// Alias for `Camera::new()`.

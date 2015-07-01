@@ -81,9 +81,9 @@ pub fn xioctl<T>(fd: RawFd, request: usize, arg: &mut T) -> io::Result<()> {
 
 pub fn xioctl_valid<T>(fd: RawFd, request: usize, arg: &mut T) ->io::Result<bool> {
     match xioctl(fd, request, arg) {
+        Ok(_) => Ok(true),
         Err(ref err) if err.kind() == io::ErrorKind::InvalidInput => Ok(false),
-        Err(err) => Err(err),
-        Ok(_) => Ok(true)
+        Err(err) => Err(err)
     }
 }
 
@@ -350,6 +350,44 @@ pub struct FrmivalStepwise {
     pub step: Fract
 }
 
+#[repr(C)]
+pub struct QueryCtrl {
+    pub id: u32,
+    pub qtype: u32,
+    pub name: [u8; 32],
+    pub minimum: i32,
+    pub maximum: i32,
+    pub step: i32,
+    pub default_value: i32,
+    pub flags: u32,
+    reserved: [u32; 2]
+}
+
+impl QueryCtrl {
+    pub fn new() -> QueryCtrl {
+        unsafe { mem::zeroed() }
+    }
+}
+
+#[repr(C)]
+#[packed]
+pub struct QueryMenu {
+	pub id: u32,
+	pub index: u32,
+    pub name: [u8; 32],
+	reserved: u32
+}
+
+impl QueryMenu {
+    pub fn new() -> QueryMenu {
+        unsafe { mem::zeroed() }
+    }
+
+    pub fn value(&mut self) -> &mut i64 {
+        unsafe { mem::transmute(self.name.as_mut_ptr()) }
+    }
+}
+
 pub const BUF_TYPE_VIDEO_CAPTURE: u32 = 1;
 pub const FMT_FLAG_COMPRESSED: u32 = 1;
 pub const FMT_FLAG_EMULATED: u32 = 2;
@@ -357,10 +395,80 @@ pub const FRMIVAL_TYPE_DISCRETE: u32 = 1;
 pub const FRMSIZE_TYPE_DISCRETE: u32 = 1;
 pub const MEMORY_MMAP: u32 = 1;
 
+// Control IDs.
+pub const CID_BASE: u32 = 9963776;
+pub const CID_BRIGHTNESS: u32 = (CID_BASE+0);
+pub const CID_CONTRAST: u32 = (CID_BASE+1);
+pub const CID_SATURATION: u32 = (CID_BASE+2);
+pub const CID_HUE: u32 = (CID_BASE+3);
+pub const CID_AUDIO_VOLUME: u32 = (CID_BASE+5);
+pub const CID_AUDIO_BALANCE: u32 = (CID_BASE+6);
+pub const CID_AUDIO_BASS: u32 = (CID_BASE+7);
+pub const CID_AUDIO_TREBLE: u32 = (CID_BASE+8);
+pub const CID_AUDIO_MUTE: u32 = (CID_BASE+9);
+pub const CID_AUDIO_LOUDNESS: u32 = (CID_BASE+10);
+pub const CID_BLACK_LEVEL: u32 = (CID_BASE+11);
+pub const CID_AUTO_WHITE_BALANCE: u32 = (CID_BASE+12);
+pub const CID_DO_WHITE_BALANCE: u32 = (CID_BASE+13);
+pub const CID_RED_BALANCE: u32 = (CID_BASE+14);
+pub const CID_BLUE_BALANCE: u32 = (CID_BASE+15);
+pub const CID_GAMMA: u32 = (CID_BASE+16);
+pub const CID_WHITENESS: u32 = (CID_GAMMA);
+pub const CID_EXPOSURE: u32 = (CID_BASE+17);
+pub const CID_AUTOGAIN: u32 = (CID_BASE+18);
+pub const CID_GAIN: u32 = (CID_BASE+19);
+pub const CID_HFLIP: u32 = (CID_BASE+20);
+pub const CID_VFLIP: u32 = (CID_BASE+21);
+pub const CID_POWER_LINE_FREQUENCY: u32 = (CID_BASE+24);
+pub const CID_HUE_AUTO: u32 = (CID_BASE+25);
+pub const CID_WHITE_BALANCE_TEMPERATURE: u32 = (CID_BASE+26);
+pub const CID_SHARPNESS: u32 = (CID_BASE+27);
+pub const CID_BACKLIGHT_COMPENSATION: u32 = (CID_BASE+28);
+pub const CID_CHROMA_AGC: u32 = (CID_BASE+29);
+pub const CID_COLOR_KILLER: u32 = (CID_BASE+30);
+pub const CID_COLORFX: u32 = (CID_BASE+31);
+pub const CID_AUTOBRIGHTNESS: u32 = (CID_BASE+32);
+pub const CID_BAND_STOP_FILTER: u32 = (CID_BASE+33);
+pub const CID_ROTATE: u32 = (CID_BASE+34);
+pub const CID_BG_COLOR: u32 = (CID_BASE+35);
+pub const CID_CHROMA_GAIN: u32 = (CID_BASE+36);
+pub const CID_ILLUMINATORS_1: u32 = (CID_BASE+37);
+pub const CID_ILLUMINATORS_2: u32 = (CID_BASE+38);
+pub const CID_MIN_BUFFERS_FOR_CAPTURE: u32 = (CID_BASE+39);
+pub const CID_MIN_BUFFERS_FOR_OUTPUT: u32 = (CID_BASE+40);
+pub const CID_ALPHA_COMPONENT: u32 = (CID_BASE+41);
+pub const CID_COLORFX_CBCR: u32 = (CID_BASE+42);
+pub const CID_LASTP1: u32 = (CID_BASE+43);
+pub const CID_PRIVATE_BASE: u32 = 0x08000000;
+
+// Control types.
+pub const CTRL_TYPE_INTEGER: u32 = 1;
+pub const CTRL_TYPE_BOOLEAN: u32 = 2;
+pub const CTRL_TYPE_MENU: u32 = 3;
+pub const CTRL_TYPE_BUTTON: u32 = 4;
+pub const CTRL_TYPE_INTEGER64: u32 = 5;
+pub const CTRL_TYPE_STRING: u32 = 7;
+pub const CTRL_TYPE_BITMASK: u32 = 8;
+pub const CTRL_TYPE_INTEGER_MENU: u32 = 9;
+
+// Control flags.
+pub const CTRL_FLAG_DISABLED: u32 = 0x0001;
+pub const CTRL_FLAG_GRABBED: u32 = 0x0002;
+pub const CTRL_FLAG_READ_ONLY: u32 = 0x0004;
+pub const CTRL_FLAG_UPDATE: u32 = 0x0008;
+pub const CTRL_FLAG_INACTIVE: u32 = 0x0010;
+pub const CTRL_FLAG_SLIDER: u32 = 0x0020;
+pub const CTRL_FLAG_WRITE_ONLY: u32 = 0x0040;
+pub const CTRL_FLAG_VOLATILE: u32 = 0x0080;
+pub const CTRL_FLAG_HAS_PAYLOAD: u32 = 0x0100;
+pub const CTRL_FLAG_EXECUTE_ON_WRITE: u32 = 0x0200;
+
 // IOCTL codes.
 pub const VIDIOC_ENUM_FMT: usize = 3225441794;
 pub const VIDIOC_ENUM_FRAMEINTERVALS: usize = 3224655435;
 pub const VIDIOC_ENUM_FRAMESIZES: usize = 3224131146;
+pub const VIDIOC_QUERYCTRL: usize = 3225703972;
+pub const VIDIOC_QUERYMENU: usize = 3224131109;
 pub const VIDIOC_REQBUFS: usize = 3222558216;
 pub const VIDIOC_S_PARM: usize = 3234616854;
 pub const VIDIOC_STREAMOFF: usize = 1074026003;
@@ -404,4 +512,6 @@ fn test_sizes() {
     assert_eq!(mem::size_of::<FmtDesc>(), 64);
     assert_eq!(mem::size_of::<Frmsizeenum>(), 44);
     assert_eq!(mem::size_of::<Frmivalenum>(), 52);
+    assert_eq!(mem::size_of::<QueryCtrl>(), 68);
+    assert_eq!(mem::size_of::<QueryMenu>(), 44);
 }

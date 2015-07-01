@@ -7,7 +7,7 @@ use std::io::Write;
 fn main() {
     let mut camera = rscam::new("/dev/video0").unwrap();
 
-    for format in camera.formats().unwrap().iter() {
+    for format in &camera.formats().unwrap() {
         println!("{:?}", format);
         println!("  {:?}", camera.resolutions(&format.format).unwrap());
     }

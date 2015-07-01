@@ -1,15 +1,18 @@
 extern crate rscam;
 
-fn main() {
-    let camera = rscam::new("/dev/video0").unwrap();
+use rscam::{Camera, ResolutionInfo};
 
-    for format in camera.formats().unwrap().iter() {
+
+fn main() {
+    let camera = Camera::new("/dev/video0").unwrap();
+
+    for format in &camera.formats().unwrap() {
         println!("{:?}", format);
 
         let resolutions = camera.resolutions(&format.format).unwrap();
 
-        if let rscam::ResolutionInfo::Discretes(d) = resolutions {
-            for resol in d.iter() {
+        if let ResolutionInfo::Discretes(d) = resolutions {
+            for resol in &d {
                 println!("  {}x{}  {:?}", resol.0, resol.1,
                     camera.intervals(&format.format, *resol).unwrap());
             }

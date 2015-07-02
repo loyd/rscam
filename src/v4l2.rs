@@ -388,6 +388,18 @@ impl QueryMenu {
     }
 }
 
+#[repr(C)]
+pub struct Control {
+    pub id: u32,
+    pub value: i32
+}
+
+impl Control {
+    pub fn new() -> Control {
+        unsafe { mem::zeroed() }
+    }
+}
+
 pub const BUF_TYPE_VIDEO_CAPTURE: u32 = 1;
 pub const FMT_FLAG_COMPRESSED: u32 = 1;
 pub const FMT_FLAG_EMULATED: u32 = 2;
@@ -467,9 +479,13 @@ pub const CTRL_FLAG_EXECUTE_ON_WRITE: u32 = 0x0200;
 pub const VIDIOC_ENUM_FMT: usize = 3225441794;
 pub const VIDIOC_ENUM_FRAMEINTERVALS: usize = 3224655435;
 pub const VIDIOC_ENUM_FRAMESIZES: usize = 3224131146;
+pub const VIDIOC_G_CTRL: usize = 3221771803;
+pub const VIDIOC_G_EXT_CTRLS: usize = 3223344711;
 pub const VIDIOC_QUERYCTRL: usize = 3225703972;
 pub const VIDIOC_QUERYMENU: usize = 3224131109;
 pub const VIDIOC_REQBUFS: usize = 3222558216;
+pub const VIDIOC_S_CTRL: usize = 3221771804;
+pub const VIDIOC_S_EXT_CTRLS: usize = 3223344712;
 pub const VIDIOC_S_PARM: usize = 3234616854;
 pub const VIDIOC_STREAMOFF: usize = 1074026003;
 pub const VIDIOC_STREAMON: usize = 1074026002;
@@ -514,4 +530,6 @@ fn test_sizes() {
     assert_eq!(mem::size_of::<Frmivalenum>(), 52);
     assert_eq!(mem::size_of::<QueryCtrl>(), 68);
     assert_eq!(mem::size_of::<QueryMenu>(), 44);
+    assert_eq!(mem::size_of::<Control>(), 8);
+    // assert_eq!(mem::size_of::<ExtControl>(), 20);
 }

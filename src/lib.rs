@@ -390,23 +390,26 @@ impl Camera {
     pub fn get_control_by_id(&self, id: u32) -> io::Result<Control> {
         let mut qctrl = v4l2::QueryCtrl::new();
         qctrl.id = id;
+        let mut ctrl = v4l2::Control::new();
+        ctrl.id = id;
 
         try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_QUERYCTRL, &mut qctrl));
+        try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_G_CTRL, &mut ctrl));
 
         let data = match qctrl.qtype {
             v4l2::CTRL_TYPE_INTEGER => CtrlData::Integer {
-                value: 0,
+                value: ctrl.value,
                 default: qctrl.default_value,
                 minimum: qctrl.minimum,
                 maximum: qctrl.maximum,
                 step: qctrl.step
             },
             v4l2::CTRL_TYPE_BOOLEAN => CtrlData::Boolean {
-                value: false,
+                value: ctrl.value != 0,
                 default: qctrl.default_value != 0
             },
             v4l2::CTRL_TYPE_MENU => CtrlData::Menu {
-                value: 0,
+                value: ctrl.value as u32,
                 default: qctrl.default_value as u32,
                 items: {
                     let mut items = vec![];

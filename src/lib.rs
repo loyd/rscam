@@ -387,7 +387,11 @@ impl Camera {
         Ok(controls)
     }
 
-    pub fn get_control_by_id(&self, id: u32) -> io::Result<Control> {
+    pub fn get_control(&self, cid: CID) -> io::Result<Control> {
+        self.get_control_by_id(cid.into())
+    }
+
+    fn get_control_by_id(&self, id: u32) -> io::Result<Control> {
         let mut qctrl = v4l2::QueryCtrl::new();
         qctrl.id = id;
         let mut ctrl = v4l2::Control::new();
@@ -589,6 +593,65 @@ impl Drop for Camera {
         }
 
         let _ = v4l2::close(self.fd);
+    }
+}
+
+pub enum CID {
+    Brightness, Contrast, Saturation, Hue, AudioVolume, AudioBalance, AudioBass, AudioTreble,
+    AudioMute, AudioLoudness, BlackLevel, AutoWhiteBalance, DoWhiteBalance, RedBalance,
+    BlueBalance, Gamma, Whiteness, Exposure, Autogain, Gain, Hflip, Vflip, PowerLineFrequency,
+    HueAuto, WhiteBalanceTemperature, Sharpness, BacklightCompensation, ChromaAgc, ColorKiller,
+    Colorfx, Autobrightness, BandStopFilter, Rotate, BgColor, ChromaGain, Illuminators1,
+    Illuminators2, MinBuffersForCapture, MinBuffersForOutput, AlphaComponent, ColorfxCbcr,
+    Custom(u32)
+}
+
+impl Into<u32> for CID {
+    fn into(self) -> u32 {
+        v4l2::CID_BASE + match self {
+            CID::Brightness => 0,
+            CID::Contrast => 1,
+            CID::Saturation => 2,
+            CID::Hue => 3,
+            CID::AudioVolume => 5,
+            CID::AudioBalance => 6,
+            CID::AudioBass => 7,
+            CID::AudioTreble => 8,
+            CID::AudioMute => 9,
+            CID::AudioLoudness => 10,
+            CID::BlackLevel => 11,
+            CID::AutoWhiteBalance => 12,
+            CID::DoWhiteBalance => 13,
+            CID::RedBalance => 14,
+            CID::BlueBalance => 15,
+            CID::Gamma => 16,
+            CID::Whiteness => 16,
+            CID::Exposure => 17,
+            CID::Autogain => 18,
+            CID::Gain => 19,
+            CID::Hflip => 20,
+            CID::Vflip => 21,
+            CID::PowerLineFrequency => 24,
+            CID::HueAuto => 25,
+            CID::WhiteBalanceTemperature => 26,
+            CID::Sharpness => 27,
+            CID::BacklightCompensation => 28,
+            CID::ChromaAgc => 29,
+            CID::ColorKiller => 30,
+            CID::Colorfx => 31,
+            CID::Autobrightness => 32,
+            CID::BandStopFilter => 33,
+            CID::Rotate => 34,
+            CID::BgColor => 35,
+            CID::ChromaGain => 36,
+            CID::Illuminators1 => 37,
+            CID::Illuminators2 => 38,
+            CID::MinBuffersForCapture => 39,
+            CID::MinBuffersForOutput => 40,
+            CID::AlphaComponent => 41,
+            CID::ColorfxCbcr => 42,
+            CID::Custom(id) => return id
+        }
     }
 }
 

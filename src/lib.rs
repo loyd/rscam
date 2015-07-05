@@ -443,6 +443,80 @@ impl Camera {
         })
     }
 
+    pub fn set_control(&self, ctrl: Ctrl) -> Result<()> {
+        use Ctrl::*;
+        match ctrl {
+            Brightness(b) => self.set_user_control_by_id(CID::Brightness, b),
+            Contrast(c) => self.set_user_control_by_id(CID::Contrast, c),
+            Saturation(s) => self.set_user_control_by_id(CID::Saturation, s),
+            Hue(h) => self.set_user_control_by_id(CID::Hue, h),
+            AudioVolume(v) => self.set_user_control_by_id(CID::AudioVolume, v),
+            AudioBalance(b) => self.set_user_control_by_id(CID::AudioBalance, b),
+            AudioBass(b) => self.set_user_control_by_id(CID::AudioBass, b),
+            AudioTreble(t) => self.set_user_control_by_id(CID::AudioTreble, t),
+            AudioMute(m) => self.set_user_control_by_id(CID::AudioMute, m as i32),
+            AudioLoudness(l) => self.set_user_control_by_id(CID::AudioLoudness, l as i32) ,
+            BlackLevel(l) => self.set_user_control_by_id(CID::BlackLevel, l),
+            AutoWhiteBalance(b) => self.set_user_control_by_id(CID::AutoWhiteBalance, b as i32),
+            DoWhiteBalance => self.set_user_control_by_id(CID::DoWhiteBalance, 0),
+            RedBalance(b) => self.set_user_control_by_id(CID::RedBalance, b),
+            BlueBalance(b) => self.set_user_control_by_id(CID::BlueBalance, b),
+            Gamma(g) => self.set_user_control_by_id(CID::Gamma, g),
+            Whiteness(w) => self.set_user_control_by_id(CID::Whiteness, w),
+            Exposure(e) => self.set_user_control_by_id(CID::Exposure, e),
+            Autogain(a) => self.set_user_control_by_id(CID::Brightness, a as i32),
+            Gain(g) => self.set_user_control_by_id(CID::Gain, g),
+            Hflip(f) => self.set_user_control_by_id(CID::Hflip, f as i32),
+            Vflip(f) => self.set_user_control_by_id(CID::Vflip, f as i32),
+            PowerLineFrequencyDisabled => self.set_user_control_by_id(CID::PowerLineFrequency, 0),
+            PowerLineFrequency50hz => self.set_user_control_by_id(CID::PowerLineFrequency, 1),
+            PowerLineFrequency60hz => self.set_user_control_by_id(CID::PowerLineFrequency, 2),
+            PowerLineFrequencyAuto => self.set_user_control_by_id(CID::PowerLineFrequency, 3),
+            HueAuto(h) => self.set_user_control_by_id(CID::HueAuto, h as i32),
+            WhiteBalanceTemperature(t) =>
+                self.set_user_control_by_id(CID::WhiteBalanceTemperature, t),
+            Sharpness(s) => self.set_user_control_by_id(CID::Sharpness, s),
+            BacklightCompensation(c) => self.set_user_control_by_id(CID::BacklightCompensation, c),
+            ChromaAgc(a) => self.set_user_control_by_id(CID::ChromaAgc, a as i32),
+            ColorKiller(k) => self.set_user_control_by_id(CID::ColorKiller, k as i32),
+            ColorfxNone => self.set_user_control_by_id(CID::Colorfx, 0),
+            ColorfxBw => self.set_user_control_by_id(CID::Colorfx, 1),
+            ColorfxSepia => self.set_user_control_by_id(CID::Colorfx, 2),
+            ColorfxNegative => self.set_user_control_by_id(CID::Colorfx, 3),
+            ColorfxEmboss => self.set_user_control_by_id(CID::Colorfx, 4),
+            ColorfxSketch => self.set_user_control_by_id(CID::Colorfx, 5),
+            ColorfxSkyBlue => self.set_user_control_by_id(CID::Colorfx, 6),
+            ColorfxGrassGreen => self.set_user_control_by_id(CID::Colorfx, 7),
+            ColorfxSkinWhiten => self.set_user_control_by_id(CID::Colorfx, 8),
+            ColorfxVivid => self.set_user_control_by_id(CID::Colorfx, 9),
+            ColorfxAqua => self.set_user_control_by_id(CID::Colorfx, 10),
+            ColorfxArtFreeze => self.set_user_control_by_id(CID::Colorfx, 11),
+            ColorfxSilhouette => self.set_user_control_by_id(CID::Colorfx, 12),
+            ColorfxSolarization => self.set_user_control_by_id(CID::Colorfx, 13),
+            ColorfxAntique => self.set_user_control_by_id(CID::Colorfx, 14),
+            ColorfxSetCbcr => self.set_user_control_by_id(CID::Colorfx, 15),
+            Autobrightness(a) => self.set_user_control_by_id(CID::Autobrightness, a as i32),
+            BandStopFilter(f) => self.set_user_control_by_id(CID::BandStopFilter, f),
+            Rotate(r) => self.set_user_control_by_id(CID::Rotate, r),
+            BgColor(c) => self.set_user_control_by_id(CID::BgColor, c),
+            ChromaGain(g) => self.set_user_control_by_id(CID::ChromaGain, g),
+            Illuminators1(i) => self.set_user_control_by_id(CID::Illuminators1, i as i32),
+            Illuminators2(i) => self.set_user_control_by_id(CID::Illuminators2, i as i32),
+            MinBuffersForCapture(b) => self.set_user_control_by_id(CID::MinBuffersForCapture, b),
+            MinBuffersForOutput(b) => self.set_user_control_by_id(CID::MinBuffersForOutput, b),
+            AlphaComponent(a) => self.set_user_control_by_id(CID::AlphaComponent, a),
+            ColorfxCbcr(c) => self.set_user_control_by_id(CID::ColorfxCbcr, c)
+        }
+    }
+
+    fn set_user_control_by_id(&self, cid: CID, val: i32) -> Result<()> {
+        let mut ctrl = v4l2::Control::new();
+        ctrl.id = cid.into();
+        ctrl.value = val;
+        try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_S_CTRL, &mut ctrl));
+        Ok(())
+    }
+
     /// Start streaming.
     ///
     /// # Panics
@@ -653,6 +727,68 @@ impl Into<u32> for CID {
             CID::Custom(id) => return id
         }
     }
+}
+
+pub enum Ctrl {
+    Brightness(i32),
+    Contrast(i32),
+    Saturation(i32),
+    Hue(i32),
+    AudioVolume(i32),
+    AudioBalance(i32),
+    AudioBass(i32),
+    AudioTreble(i32),
+    AudioMute(bool),
+    AudioLoudness(bool),
+    BlackLevel(i32),
+    AutoWhiteBalance(bool),
+    DoWhiteBalance,
+    RedBalance(i32),
+    BlueBalance(i32),
+    Gamma(i32),
+    Whiteness(i32),
+    Exposure(i32),
+    Autogain(bool),
+    Gain(i32),
+    Hflip(bool),
+    Vflip(bool),
+    PowerLineFrequencyDisabled,
+    PowerLineFrequency50hz,
+    PowerLineFrequency60hz,
+    PowerLineFrequencyAuto,
+    HueAuto(bool),
+    WhiteBalanceTemperature(i32),
+    Sharpness(i32),
+    BacklightCompensation(i32),
+    ChromaAgc(bool),
+    ColorKiller(bool),
+    ColorfxNone,
+    ColorfxBw,
+    ColorfxSepia,
+    ColorfxNegative,
+    ColorfxEmboss,
+    ColorfxSketch,
+    ColorfxSkyBlue,
+    ColorfxGrassGreen,
+    ColorfxSkinWhiten,
+    ColorfxVivid,
+    ColorfxAqua,
+    ColorfxArtFreeze,
+    ColorfxSilhouette,
+    ColorfxSolarization,
+    ColorfxAntique,
+    ColorfxSetCbcr,
+    Autobrightness(bool),
+    BandStopFilter(i32),
+    Rotate(i32),
+    BgColor(i32),
+    ChromaGain(i32),
+    Illuminators1(bool),
+    Illuminators2(bool),
+    MinBuffersForCapture(i32),
+    MinBuffersForOutput(i32),
+    AlphaComponent(i32),
+    ColorfxCbcr(i32)
 }
 
 pub struct Control {

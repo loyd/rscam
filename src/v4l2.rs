@@ -370,7 +370,7 @@ impl QueryCtrl {
 }
 
 #[repr(C)]
-#[packed]
+//#[packed]
 pub struct QueryMenu {
 	pub id: u32,
 	pub index: u32,

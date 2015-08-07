@@ -29,11 +29,15 @@ extern crate libc;
 mod v4l2;
 
 use std::convert::From;
+use std::error;
+use std::fmt;
+use std::io;
 use std::ops::Deref;
 use std::os::unix::io::RawFd;
+use std::result;
 use std::slice;
+use std::str;
 use std::sync::Arc;
-use std::{io, fmt, str, result};
 
 use v4l2::MappedRegion;
 
@@ -60,10 +64,42 @@ pub enum Error {
     BadInterval,
     /// Unsupported resolution (width and/or height).
     BadResolution,
-    /// Unsupported format of pixel.
+    /// Unsupported format of pixels.
     BadFormat,
     /// Unsupported field.
     BadField
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Error::Io(ref err) => write!(f, "I/O error: {}", err),
+            Error::BadInterval => write!(f, "Invalid or unsupported frame interval"),
+            Error::BadResolution => write!(f, "Invalid or unsupported resolution (width and/or height)"),
+            Error::BadFormat => write!(f, "Invalid or unsupported format of pixels"),
+            Error::BadField => write!(f, "Invalid or unsupported field")
+        }
+    }
+}
+
+impl error::Error for Error {
+    fn description(&self) -> &str {
+        match *self {
+            Error::Io(ref err) => err.description(),
+            Error::BadInterval => "bad interval",
+            Error::BadResolution => "bad resolution",
+            Error::BadFormat => "bad format",
+            Error::BadField => "bad field"
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        if let Error::Io(ref err) = *self {
+            Some(err)
+        } else {
+            None
+        }
+    }
 }
 
 impl From<io::Error> for Error {
@@ -363,6 +399,7 @@ impl Camera {
         }
     }
 
+    /// Get info about the available controls.
     pub fn controls(&self) -> io::Result<Vec<Control>> {
         let mut controls = vec![];
 
@@ -387,6 +424,7 @@ impl Camera {
         Ok(controls)
     }
 
+    /// Get info about the control by id.
     pub fn get_control(&self, cid: CID) -> io::Result<Control> {
         self.get_control_by_id(cid.into())
     }
@@ -443,6 +481,7 @@ impl Camera {
         })
     }
 
+    /// Set value of the control.
     pub fn set_control(&self, ctrl: Ctrl) -> Result<()> {
         let (id, val) = ctrl.into();
         let mut ctrl = v4l2::Control::new();

@@ -305,16 +305,8 @@ impl Camera {
     }
 
     /// Get detailed info about the available formats.
-    pub fn formats(&self) -> io::Result<Vec<FormatInfo>> {
-        let mut formats = vec![];
-        let mut fmt = v4l2::FmtDesc::new();
-
-        while try!(v4l2::xioctl_valid(self.fd, v4l2::VIDIOC_ENUM_FMT, &mut fmt)) {
-            formats.push(FormatInfo::new(fmt.pixelformat, &fmt.description, fmt.flags));
-            fmt.index += 1;
-        }
-
-        Ok(formats)
+    pub fn formats(&self) -> FormatIter {
+        FormatIter { camera: self, index: 0 }
     }
 
     /// Get detailed info about the available resolutions.
@@ -624,6 +616,29 @@ impl Drop for Camera {
     }
 }
 
+pub struct FormatIter<'a> {
+    camera: &'a Camera,
+    index: u32
+}
+
+impl<'a> Iterator for FormatIter<'a> {
+    type Item = io::Result<FormatInfo>;
+
+    fn next(&mut self) -> Option<io::Result<FormatInfo>> {
+        let mut fmt = v4l2::FmtDesc::new();
+        fmt.index = self.index;
+
+        match v4l2::xioctl_valid(self.camera.fd, v4l2::VIDIOC_ENUM_FMT, &mut fmt) {
+            Ok(true) => {
+                self.index += 1;
+                Some(Ok(FormatInfo::new(fmt.pixelformat, &fmt.description, fmt.flags)))
+            },
+            Ok(false) => None,
+            Err(err) => Some(Err(err))
+        }
+    }
+}
+
 pub struct ControlIter<'a> {
     camera: &'a Camera,
     id: u32,
@@ -645,7 +660,7 @@ impl<'a> Iterator for ControlIter<'a> {
                 self.id = ctrl.id;
                 Some(Ok(ctrl))
             },
-            r @ Err(_) => Some(r)
+            err @ Err(_) => Some(err)
         }
     }
 }

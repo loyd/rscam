@@ -6,7 +6,8 @@ use rscam::{Camera, ResolutionInfo};
 fn main() {
     let camera = Camera::new("/dev/video0").unwrap();
 
-    for format in &camera.formats().unwrap() {
+    for wformat in camera.formats() {
+        let format = wformat.unwrap();
         println!("{:?}", format);
 
         let resolutions = camera.resolutions(&format.format).unwrap();

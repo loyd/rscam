@@ -402,46 +402,57 @@ impl Camera {
     }
 
     fn get_control_by_id(&self, id: u32) -> io::Result<Control> {
-        let mut qctrl = v4l2::QueryCtrl::new();
-        qctrl.id = id;
-        let mut ctrl = v4l2::Control::new();
-        ctrl.id = id;
-
+        let mut qctrl = v4l2::QueryCtrl::new(id);
         try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_QUERYCTRL, &mut qctrl));
-        try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_G_CTRL, &mut ctrl));
 
         let data = match qctrl.qtype {
             v4l2::CTRL_TYPE_INTEGER => CtrlData::Integer {
-                value: ctrl.value,
+                value: try!(self.get_control_value(qctrl.id)),
                 default: qctrl.default_value,
                 minimum: qctrl.minimum,
                 maximum: qctrl.maximum,
                 step: qctrl.step
             },
             v4l2::CTRL_TYPE_BOOLEAN => CtrlData::Boolean {
-                value: ctrl.value != 0,
+                value: try!(self.get_control_value(qctrl.id)) != 0,
                 default: qctrl.default_value != 0
             },
             v4l2::CTRL_TYPE_MENU => CtrlData::Menu {
-                value: ctrl.value as u32,
+                value: try!(self.get_control_value(qctrl.id)) as u32,
                 default: qctrl.default_value as u32,
-                items: {
-                    let mut items = vec![];
-                    let mut qmenu = v4l2::QueryMenu::new();
-                    qmenu.id = qctrl.id;
-                    for index in (qctrl.minimum..qctrl.maximum+1) {
-                        qmenu.index = index as u32;
-                        if try!(v4l2::xioctl_valid(self.fd, v4l2::VIDIOC_QUERYMENU, &mut qmenu)) {
-                            items.push(CtrlMenuItem {
-                                index: index as u32,
-                                name: buffer_to_string(&qmenu.name)
-                            });
-                        }
-                    }
-                    items
-                }
+                items: try!(self.get_menu_items(qctrl.id, qctrl.minimum as u32,
+                                                qctrl.maximum as u32))
             },
             v4l2::CTRL_TYPE_BUTTON => CtrlData::Button,
+            v4l2::CTRL_TYPE_INTEGER64 => {
+                let mut qectrl = v4l2::QueryExtCtrl::new(qctrl.id);
+                try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_QUERY_EXT_CTRL, &mut qectrl));
+
+                CtrlData::Integer64 {
+                    value: try!(self.get_ext_control_value(qctrl.id)),
+                    default: qectrl.default_value,
+                    minimum: qectrl.minimum,
+                    maximum: qectrl.maximum,
+                    step: qectrl.step as i64
+                }
+            },
+            v4l2::CTRL_TYPE_STRING => CtrlData::String {
+                value: try!(self.get_string_control(qctrl.id, qctrl.maximum as u32)),
+                minimum: qctrl.minimum as u32,
+                maximum: qctrl.maximum as u32,
+                step: qctrl.step as u32
+            },
+            v4l2::CTRL_TYPE_BITMASK => CtrlData::Bitmask {
+                value: try!(self.get_control_value(qctrl.id)) as u32,
+                default: qctrl.default_value as u32,
+                maximum: qctrl.maximum as u32
+            },
+            v4l2::CTRL_TYPE_INTEGER_MENU => CtrlData::IntegerMenu {
+                value: try!(self.get_control_value(qctrl.id)) as u32,
+                default: qctrl.default_value as u32,
+                items: try!(self.get_int_menu_items(qctrl.id, qctrl.minimum as u32,
+                                                    qctrl.maximum as u32))
+            },
             _ => CtrlData::Unknown
         };
 
@@ -453,11 +464,65 @@ impl Camera {
         })
     }
 
+    fn get_control_value(&self, id: u32) -> io::Result<i32> {
+        let mut ctrl = v4l2::Control::new(id);
+        try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_G_CTRL, &mut ctrl));
+        Ok(ctrl.value)
+    }
+
+    fn get_ext_control_value(&self, id: u32) -> io::Result<i64> {
+        let mut ctrl = v4l2::ExtControl::new(id, 0);
+        {
+            let mut ctrls = v4l2::ExtControls::new(id & v4l2::ID2CLASS, &mut ctrl);
+            try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_G_EXT_CTRLS, &mut ctrls));
+        }
+        Ok(ctrl.value)
+    }
+
+    fn get_menu_items(&self, id: u32, min: u32, max: u32) -> io::Result<Vec<CtrlMenuItem>> {
+        let mut items = vec![];
+        let mut qmenu = v4l2::QueryMenu::new(id);
+        for index in (min..max+1) {
+            qmenu.index = index as u32;
+            if try!(v4l2::xioctl_valid(self.fd, v4l2::VIDIOC_QUERYMENU, &mut qmenu)) {
+                items.push(CtrlMenuItem {
+                    index: index,
+                    name: buffer_to_string(&qmenu.name)
+                });
+            }
+        }
+        Ok(items)
+    }
+
+    fn get_int_menu_items(&self, id: u32, min: u32, max: u32) -> io::Result<Vec<CtrlIntMenuItem>> {
+        let mut items = vec![];
+        let mut qmenu = v4l2::QueryMenu::new(id);
+        for index in (min..max+1) {
+            qmenu.index = index as u32;
+            if try!(v4l2::xioctl_valid(self.fd, v4l2::VIDIOC_QUERYMENU, &mut qmenu)) {
+                items.push(CtrlIntMenuItem {
+                    index: index,
+                    value: *qmenu.value()
+                });
+            }
+        }
+        Ok(items)
+    }
+
+    fn get_string_control(&self, id: u32, size: u32) -> io::Result<String> {
+        let mut buffer = Vec::with_capacity(size as usize + 1);
+        let mut ctrl = v4l2::ExtControl::new(id, size + 1);
+        ctrl.value = buffer.as_mut_ptr() as i64;
+        let mut ctrls = v4l2::ExtControls::new(id & v4l2::ID2CLASS, &mut ctrl);
+        try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_G_EXT_CTRLS, &mut ctrls));
+        unsafe { buffer.set_len(size as usize + 1) };
+        Ok(buffer_to_string(&buffer[..]))
+    }
+
     /// Set value of the control.
     pub fn set_control(&self, ctrl: Ctrl) -> Result<()> {
         let (id, val) = ctrl.into();
-        let mut ctrl = v4l2::Control::new();
-        ctrl.id = id;
+        let mut ctrl = v4l2::Control::new(id);
         ctrl.value = val;
         try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_S_CTRL, &mut ctrl));
         Ok(())
@@ -649,12 +714,9 @@ impl<'a> Iterator for ControlIter<'a> {
     type Item = io::Result<Control>;
 
     fn next(&mut self) -> Option<io::Result<Control>> {
-        const NEXT: u32 = 0x80000000;
-        const ID2CLASS: u32 = 0x0fff0000;
-
-        match self.camera.get_control_by_id(self.id | NEXT) {
+        match self.camera.get_control_by_id(self.id | v4l2::NEXT_CTRL) {
             Ok(ref ctrl) if self.class != CtrlClass::All &&
-                            ctrl.id & ID2CLASS != self.class as u32 => None,
+                            ctrl.id & v4l2::ID2CLASS != self.class as u32 => None,
             Err(ref err) if err.kind() == io::ErrorKind::InvalidInput => None,
             Ok(ctrl) => {
                 self.id = ctrl.id;
@@ -920,16 +982,7 @@ pub enum CtrlData {
         default: u32,
         items: Vec<CtrlMenuItem>
     },
-    IntegerMenu {
-        value: u32,
-        default: u32,
-        items: Vec<CtrlIntMenuItem>
-    },
-    Bitmask {
-        value: u32,
-        default: u32,
-        maximum: u32
-    },
+    Button,
     Integer64 {
         value: i64,
         default: i64,
@@ -943,7 +996,16 @@ pub enum CtrlData {
         maximum: u32,
         step: u32
     },
-    Button,
+    Bitmask {
+        value: u32,
+        default: u32,
+        maximum: u32
+    },
+    IntegerMenu {
+        value: u32,
+        default: u32,
+        items: Vec<CtrlIntMenuItem>
+    },
     Unknown
 }
 

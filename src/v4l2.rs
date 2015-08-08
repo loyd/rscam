@@ -364,13 +364,41 @@ pub struct QueryCtrl {
 }
 
 impl QueryCtrl {
-    pub fn new() -> QueryCtrl {
-        unsafe { mem::zeroed() }
+    pub fn new(id: u32) -> QueryCtrl {
+        let mut qctrl: QueryCtrl = unsafe { mem::zeroed() };
+        qctrl.id = id;
+        qctrl
     }
 }
 
 #[repr(C)]
-//#[packed]
+pub struct QueryExtCtrl {
+    pub id: u32,
+    pub qtype: u32,
+    pub name: [u8; 32],
+    pub minimum: i64,
+    pub maximum: i64,
+    pub step: u64,
+    pub default_value: i64,
+    pub flags: u32,
+    pub elem_size: u32,
+    pub elems: u32,
+    pub nr_of_dims: u32,
+    pub dims: [u32; 4],
+    reserved: [u32; 32]
+}
+
+impl QueryExtCtrl {
+    pub fn new(id: u32) -> QueryExtCtrl {
+        let mut qctrl: QueryExtCtrl = unsafe { mem::zeroed() };
+        qctrl.id = id;
+        qctrl.elem_size = 8;
+        qctrl.elems = 1;
+        qctrl
+    }
+}
+
+#[repr(C, packed)]
 pub struct QueryMenu {
 	pub id: u32,
 	pub index: u32,
@@ -379,8 +407,10 @@ pub struct QueryMenu {
 }
 
 impl QueryMenu {
-    pub fn new() -> QueryMenu {
-        unsafe { mem::zeroed() }
+    pub fn new(id: u32) -> QueryMenu {
+        let mut menu: QueryMenu = unsafe { mem::zeroed() };
+        menu.id = id;
+        menu
     }
 
     pub fn value(&mut self) -> &mut i64 {
@@ -395,8 +425,37 @@ pub struct Control {
 }
 
 impl Control {
-    pub fn new() -> Control {
-        unsafe { mem::zeroed() }
+    pub fn new(id: u32) -> Control {
+        Control { id: id, value: 0 }
+    }
+}
+
+#[repr(C, packed)]
+pub struct ExtControl {
+    pub id: u32,
+    pub size: u32,
+    reserved: u32,
+    pub value: i64
+}
+
+impl ExtControl {
+    pub fn new(id: u32, size: u32) -> ExtControl {
+        ExtControl { id: id, size: size, reserved: 0, value: 0 }
+    }
+}
+
+#[repr(C)]
+pub struct ExtControls<'a> {
+    pub ctrl_class: u32,
+    pub count: u32,
+    pub error_idx: u32,
+    reserved: [u32; 2],
+    pub controls: &'a mut ExtControl
+}
+
+impl<'a> ExtControls<'a> {
+    pub fn new(class: u32, ctrl: &mut ExtControl) -> ExtControls {
+        ExtControls { ctrl_class: class, count: 1, error_idx: 0, reserved: [0; 2], controls: ctrl }
     }
 }
 
@@ -407,6 +466,9 @@ pub const FMT_FLAG_EMULATED: u32 = 2;
 pub const FRMIVAL_TYPE_DISCRETE: u32 = 1;
 pub const FRMSIZE_TYPE_DISCRETE: u32 = 1;
 pub const MEMORY_MMAP: u32 = 1;
+
+pub const ID2CLASS: u32 = 0x0fff0000;
+pub const NEXT_CTRL: u32 = 0x80000000;
 
 // Control types.
 pub const CTRL_TYPE_INTEGER: u32 = 1;
@@ -437,6 +499,7 @@ pub const VIDIOC_ENUM_FRAMESIZES: usize = 3224131146;
 pub const VIDIOC_G_CTRL: usize = 3221771803;
 pub const VIDIOC_G_EXT_CTRLS: usize = 3223344711;
 pub const VIDIOC_QUERYCTRL: usize = 3225703972;
+pub const VIDIOC_QUERY_EXT_CTRL: usize = 3236451943;
 pub const VIDIOC_QUERYMENU: usize = 3224131109;
 pub const VIDIOC_REQBUFS: usize = 3222558216;
 pub const VIDIOC_S_CTRL: usize = 3221771804;
@@ -484,7 +547,9 @@ fn test_sizes() {
     assert_eq!(mem::size_of::<Frmsizeenum>(), 44);
     assert_eq!(mem::size_of::<Frmivalenum>(), 52);
     assert_eq!(mem::size_of::<QueryCtrl>(), 68);
+    assert_eq!(mem::size_of::<QueryExtCtrl>(), 232);
     assert_eq!(mem::size_of::<QueryMenu>(), 44);
     assert_eq!(mem::size_of::<Control>(), 8);
-    // assert_eq!(mem::size_of::<ExtControl>(), 20);
+    assert_eq!(mem::size_of::<ExtControl>(), 20);
+    assert_eq!(mem::size_of::<ExtControls>(), 32);
 }

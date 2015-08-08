@@ -400,27 +400,8 @@ impl Camera {
     }
 
     /// Get info about the available controls.
-    pub fn controls(&self, class: CtrlClass) -> io::Result<Vec<Control>> {
-        const NEXT: u32 = 0x80000000;
-        const ID2CLASS: u32 = 0x0fff0000;
-
-        let mut controls = vec![];
-        let mut id = class as u32 | NEXT;
-
-        loop {
-          match self.get_control_by_id(id) {
-            Ok(ref ctrl) if class != CtrlClass::All && ctrl.id & ID2CLASS != class as u32 => break,
-            Ok(ref ctrl) if ctrl.flags & FLAG_DISABLED > 0 => {},
-            Ok(ctrl) => {
-              id = ctrl.id | NEXT;
-              controls.push(ctrl);
-            },
-            Err(ref err) if err.kind() == io::ErrorKind::InvalidInput => break,
-            Err(err) => return Err(err)
-          }
-        }
-
-        Ok(controls)
+    pub fn controls(&self, class: CtrlClass) -> ControlIter {
+        ControlIter { camera: self, id: class as u32, class: class }
     }
 
     /// Get info about the control by id.
@@ -640,6 +621,32 @@ impl Drop for Camera {
         }
 
         let _ = v4l2::close(self.fd);
+    }
+}
+
+pub struct ControlIter<'a> {
+    camera: &'a Camera,
+    id: u32,
+    class: CtrlClass
+}
+
+impl<'a> Iterator for ControlIter<'a> {
+    type Item = io::Result<Control>;
+
+    fn next(&mut self) -> Option<io::Result<Control>> {
+        const NEXT: u32 = 0x80000000;
+        const ID2CLASS: u32 = 0x0fff0000;
+
+        match self.camera.get_control_by_id(self.id | NEXT) {
+            Ok(ref ctrl) if self.class != CtrlClass::All &&
+                            ctrl.id & ID2CLASS != self.class as u32 => None,
+            Err(ref err) if err.kind() == io::ErrorKind::InvalidInput => None,
+            Ok(ctrl) => {
+                self.id = ctrl.id;
+                Some(Ok(ctrl))
+            },
+            r @ Err(_) => Some(r)
+        }
     }
 }
 

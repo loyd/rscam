@@ -6,7 +6,8 @@ use rscam::{Camera, CtrlData, CtrlClass};
 fn main() {
     let camera = Camera::new("/dev/video0").unwrap();
 
-    for ctrl in &camera.controls(CtrlClass::All).unwrap() {
+    for wctrl in camera.controls(CtrlClass::All) {
+        let ctrl = wctrl.unwrap();
         print!("{:>32} ", ctrl.name);
 
         match ctrl.data {

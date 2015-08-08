@@ -401,16 +401,12 @@ impl Control {
 }
 
 pub const BUF_TYPE_VIDEO_CAPTURE: u32 = 1;
+pub const CID_BASE: u32 = 9963776;
 pub const FMT_FLAG_COMPRESSED: u32 = 1;
 pub const FMT_FLAG_EMULATED: u32 = 2;
 pub const FRMIVAL_TYPE_DISCRETE: u32 = 1;
 pub const FRMSIZE_TYPE_DISCRETE: u32 = 1;
 pub const MEMORY_MMAP: u32 = 1;
-
-// Control IDs.
-pub const CID_BASE: u32 = 9963776;
-pub const CID_LASTP1: u32 = CID_BASE + 43;
-pub const CID_PRIVATE_BASE: u32 = 0x08000000;
 
 // Control types.
 pub const CTRL_TYPE_INTEGER: u32 = 1;

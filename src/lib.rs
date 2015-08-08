@@ -400,25 +400,24 @@ impl Camera {
     }
 
     /// Get info about the available controls.
-    pub fn controls(&self) -> io::Result<Vec<Control>> {
+    pub fn controls(&self, class: CtrlClass) -> io::Result<Vec<Control>> {
+        const NEXT: u32 = 0x80000000;
+        const ID2CLASS: u32 = 0x0fff0000;
+
         let mut controls = vec![];
+        let mut id = class as u32 | NEXT;
 
-        for id in v4l2::CID_BASE..v4l2::CID_LASTP1 {
-            match self.get_control_by_id(id) {
-                Ok(ref ctrl) if ctrl.flags & FLAG_DISABLED > 0 => {},
-                Ok(ctrl) => controls.push(ctrl),
-                Err(ref err) if err.kind() == io::ErrorKind::InvalidInput => {},
-                Err(err) => return Err(err)
-            }
-        }
-
-        for id in v4l2::CID_PRIVATE_BASE.. {
-            match self.get_control_by_id(id) {
-                Ok(ref ctrl) if ctrl.flags & FLAG_DISABLED > 0 => {},
-                Ok(ctrl) => controls.push(ctrl),
-                Err(ref err) if err.kind() == io::ErrorKind::InvalidInput => break,
-                Err(err) => return Err(err)
-            }
+        loop {
+          match self.get_control_by_id(id) {
+            Ok(ref ctrl) if class != CtrlClass::All && ctrl.id & ID2CLASS != class as u32 => break,
+            Ok(ref ctrl) if ctrl.flags & FLAG_DISABLED > 0 => {},
+            Ok(ctrl) => {
+              id = ctrl.id | NEXT;
+              controls.push(ctrl);
+            },
+            Err(ref err) if err.kind() == io::ErrorKind::InvalidInput => break,
+            Err(err) => return Err(err)
+          }
         }
 
         Ok(controls)
@@ -456,7 +455,7 @@ impl Camera {
                 items: {
                     let mut items = vec![];
                     let mut qmenu = v4l2::QueryMenu::new();
-                    qmenu.id = id;
+                    qmenu.id = qctrl.id;
                     for index in (qctrl.minimum..qctrl.maximum+1) {
                         qmenu.index = index as u32;
                         if try!(v4l2::xioctl_valid(self.fd, v4l2::VIDIOC_QUERYMENU, &mut qmenu)) {
@@ -474,7 +473,7 @@ impl Camera {
         };
 
         Ok(Control {
-            id: id,
+            id: qctrl.id,
             name: buffer_to_string(&qctrl.name),
             data: data,
             flags: qctrl.flags
@@ -642,6 +641,22 @@ impl Drop for Camera {
 
         let _ = v4l2::close(self.fd);
     }
+}
+
+#[derive(Copy, Clone, PartialEq)]
+pub enum CtrlClass {
+    All = 0,
+    User = 0x00980000,
+    Mpeg = 0x00990000,
+    Camera = 0x009a0000,
+    FmTx = 0x009b0000,
+    Flash = 0x009c0000,
+    Jpeg = 0x009d0000,
+    ImageSource = 0x009e0000,
+    ImageProc = 0x009f0000,
+    Dv = 0x00a00000,
+    FmRx = 0x00a10000,
+    Detect = 0x00a30000
 }
 
 pub enum CID {

@@ -41,7 +41,7 @@ use std::sync::Arc;
 
 use v4l2::MappedRegion;
 
-/// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/vidioc-queryctrl.html#control-flags)
+/// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/vidioc-queryctrl.html#control-flags).
 pub use v4l2::CTRL_FLAG_DISABLED as FLAG_DISABLED;
 pub use v4l2::CTRL_FLAG_GRABBED as FLAG_GRABBED;
 pub use v4l2::CTRL_FLAG_READ_ONLY as FLAG_READ_ONLY;
@@ -646,16 +646,41 @@ impl Drop for Camera {
 #[derive(Copy, Clone, PartialEq)]
 pub enum CtrlClass {
     All = 0,
+    /// User controls.
+    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/control.html).
     User = 0x00980000,
-    Mpeg = 0x00990000,
+    /// MPEG compression controls.
+    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#mpeg-controls).
+    MPEG = 0x00990000,
+    /// Camera controls.
+    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#camera-controls).
     Camera = 0x009a0000,
-    FmTx = 0x009b0000,
+    /// FM Transmitter controls.
+    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#fm-tx-controls).
+    FMTX = 0x009b0000,
+    /// Flash device controls.
+    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#flash-controls).
     Flash = 0x009c0000,
-    Jpeg = 0x009d0000,
+    /// JPEG compression controls.
+    /// [details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#jpeg-controls).
+    JPEG = 0x009d0000,
+    /// low-level controls of image source.
+    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#image-source-controls).
     ImageSource = 0x009e0000,
+    /// Image processing controls.
+    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#image-process-controls).
     ImageProc = 0x009f0000,
-    Dv = 0x00a00000,
-    FmRx = 0x00a10000,
+    /// Digital Video controls.
+    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#dv-controls).
+    DV = 0x00a00000,
+    /// FM Receiver controls.
+    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#fm-rx-controls).
+    FMRX = 0x00a10000,
+    /// RF tuner controls.
+    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#rf-tuner-controls).
+    RFTuner = 0x00a20000,
+    /// Motion or object detection controls.
+    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#detect-controls).
     Detect = 0x00a30000
 }
 

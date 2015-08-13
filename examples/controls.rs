@@ -1,14 +1,20 @@
 extern crate rscam;
 
-use rscam::{Camera, CtrlData, CtrlClass};
+use rscam::{Camera, CtrlData};
+use rscam::FLAG_DISABLED;
 
 
 fn main() {
     let camera = Camera::new("/dev/video0").unwrap();
 
-    for wctrl in camera.controls(CtrlClass::All) {
+    for wctrl in camera.controls() {
         let ctrl = wctrl.unwrap();
         print!("{:>32} ", ctrl.name);
+
+        if ctrl.flags & FLAG_DISABLED != 0 {
+            println!("disabled");
+            continue;
+        }
 
         match ctrl.data {
             CtrlData::Integer { value, default, minimum, maximum, step } =>

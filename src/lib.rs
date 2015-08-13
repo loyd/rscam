@@ -41,17 +41,7 @@ use std::sync::Arc;
 
 use v4l2::MappedRegion;
 
-/// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/vidioc-queryctrl.html#control-flags).
-pub use v4l2::CTRL_FLAG_DISABLED as FLAG_DISABLED;
-pub use v4l2::CTRL_FLAG_GRABBED as FLAG_GRABBED;
-pub use v4l2::CTRL_FLAG_READ_ONLY as FLAG_READ_ONLY;
-pub use v4l2::CTRL_FLAG_UPDATE as FLAG_UPDATE;
-pub use v4l2::CTRL_FLAG_INACTIVE as FLAG_INACTIVE;
-pub use v4l2::CTRL_FLAG_SLIDER as FLAG_SLIDER;
-pub use v4l2::CTRL_FLAG_WRITE_ONLY as FLAG_WRITE_ONLY;
-pub use v4l2::CTRL_FLAG_VOLATILE as FLAG_VOLATILE;
-pub use v4l2::CTRL_FLAG_HAS_PAYLOAD as FLAG_HAS_PAYLOAD;
-pub use v4l2::CTRL_FLAG_EXECUTE_ON_WRITE as FLAG_EXECUTE_ON_WRITE;
+pub use v4l2::pubconsts::*;
 
 
 pub type Result<T> = result::Result<T, Error>;
@@ -108,21 +98,6 @@ impl From<io::Error> for Error {
     }
 }
 
-/// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/field-order.html#v4l2-field).
-#[derive(Copy, Clone)]
-#[repr(C)]
-pub enum Field {
-    None = 1,
-    Top,
-    Bottom,
-    Interplaced,
-    SeqTB,
-    SeqBT,
-    Alternate,
-    InterplacedTB,
-    InterplacedBT
-}
-
 pub struct Config<'a> {
     /// The mix of numerator and denominator. v4l2 uses frame intervals instead of frame rates.
     /// Default is `(1, 10)`.
@@ -133,9 +108,10 @@ pub struct Config<'a> {
     /// FourCC of format (e.g. `b"RGB3"`). Note that case matters.
     /// Default is `b"YUYV"`.
     pub format: &'a [u8],
-    /// Storage method of interlaced video.
-    /// Default is `Field::None` (progressive).
-    pub field: Field,
+    /// Storage method of interlaced video. See `FIELD_*` constants.
+    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/field-order.html#v4l2-field).
+    /// Default is `FIELD_NONE` (progressive).
+    pub field: u32,
     /// Number of buffers in the queue of camera.
     /// Default is `2`.
     pub nbuffers: u32
@@ -147,7 +123,7 @@ impl<'a> Default for Config<'a> {
             interval: (1, 10),
             resolution: (640, 480),
             format: b"YUYV",
-            field: Field::None,
+            field: FIELD_NONE,
             nbuffers: 2
         }
     }
@@ -391,17 +367,18 @@ impl Camera {
         }
     }
 
-    /// Get info about the available controls.
-    pub fn controls(&self, class: CtrlClass) -> ControlIter {
+    /// Get info about all controls.
+    pub fn controls(&self) -> ControlIter {
+        ControlIter { camera: self, id: 0, class: 0 }
+    }
+
+    /// Get info about available controls by class (see `CLASS_*` constants).
+    pub fn controls_by_class(&self, class: u32) -> ControlIter {
         ControlIter { camera: self, id: class as u32, class: class }
     }
 
     /// Get info about the control by id.
-    pub fn get_control(&self, cid: CID) -> io::Result<Control> {
-        self.get_control_by_id(cid.into())
-    }
-
-    fn get_control_by_id(&self, id: u32) -> io::Result<Control> {
+    pub fn get_control(&self, id: u32) -> io::Result<Control> {
         let mut qctrl = v4l2::QueryCtrl::new(id);
         try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_QUERYCTRL, &mut qctrl));
 
@@ -520,11 +497,11 @@ impl Camera {
     }
 
     /// Set value of the control.
-    pub fn set_control(&self, ctrl: Ctrl) -> Result<()> {
-        let (id, val) = ctrl.into();
-        let mut ctrl = v4l2::Control::new(id);
-        ctrl.value = val;
-        try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_S_CTRL, &mut ctrl));
+    pub fn set_control<T: Settable>(&self, id: u32, value: T) -> io::Result<()> {
+        let mut ctrl = v4l2::ExtControl::new(id, 0);
+        ctrl.value = value.uniform();
+        let mut ctrls = v4l2::ExtControls::new(id & v4l2::ID2CLASS, &mut ctrl);
+        try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_S_EXT_CTRLS, &mut ctrls));
         Ok(())
     }
 
@@ -590,7 +567,7 @@ impl Camera {
         Ok(())
     }
 
-    fn tune_format(&self, resolution: (u32, u32), format: &[u8], field: Field) -> Result<()> {
+    fn tune_format(&self, resolution: (u32, u32), format: &[u8], field: u32) -> Result<()> {
         if format.len() != 4 {
             return Err(Error::BadFormat);
         }
@@ -707,16 +684,15 @@ impl<'a> Iterator for FormatIter<'a> {
 pub struct ControlIter<'a> {
     camera: &'a Camera,
     id: u32,
-    class: CtrlClass
+    class: u32
 }
 
 impl<'a> Iterator for ControlIter<'a> {
     type Item = io::Result<Control>;
 
     fn next(&mut self) -> Option<io::Result<Control>> {
-        match self.camera.get_control_by_id(self.id | v4l2::NEXT_CTRL) {
-            Ok(ref ctrl) if self.class != CtrlClass::All &&
-                            ctrl.id & v4l2::ID2CLASS != self.class as u32 => None,
+        match self.camera.get_control(self.id | v4l2::NEXT_CTRL) {
+            Ok(ref ctrl) if self.class > 0 && ctrl.id & v4l2::ID2CLASS != self.class as u32 => None,
             Err(ref err) if err.kind() == io::ErrorKind::InvalidInput => None,
             Ok(ctrl) => {
                 self.id = ctrl.id;
@@ -727,234 +703,43 @@ impl<'a> Iterator for ControlIter<'a> {
     }
 }
 
-#[derive(Copy, Clone, PartialEq)]
-pub enum CtrlClass {
-    All = 0,
-    /// User controls.
-    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/control.html).
-    User = 0x00980000,
-    /// MPEG compression controls.
-    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#mpeg-controls).
-    MPEG = 0x00990000,
-    /// Camera controls.
-    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#camera-controls).
-    Camera = 0x009a0000,
-    /// FM Transmitter controls.
-    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#fm-tx-controls).
-    FMTX = 0x009b0000,
-    /// Flash device controls.
-    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#flash-controls).
-    Flash = 0x009c0000,
-    /// JPEG compression controls.
-    /// [details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#jpeg-controls).
-    JPEG = 0x009d0000,
-    /// low-level controls of image source.
-    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#image-source-controls).
-    ImageSource = 0x009e0000,
-    /// Image processing controls.
-    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#image-process-controls).
-    ImageProc = 0x009f0000,
-    /// Digital Video controls.
-    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#dv-controls).
-    DV = 0x00a00000,
-    /// FM Receiver controls.
-    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#fm-rx-controls).
-    FMRX = 0x00a10000,
-    /// RF tuner controls.
-    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#rf-tuner-controls).
-    RFTuner = 0x00a20000,
-    /// Motion or object detection controls.
-    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#detect-controls).
-    Detect = 0x00a30000
+pub trait Settable {
+    fn uniform(&self) -> i64;
 }
 
-pub enum CID {
-    Brightness, Contrast, Saturation, Hue, AudioVolume, AudioBalance, AudioBass, AudioTreble,
-    AudioMute, AudioLoudness, BlackLevel, AutoWhiteBalance, DoWhiteBalance, RedBalance,
-    BlueBalance, Gamma, Whiteness, Exposure, Autogain, Gain, Hflip, Vflip, PowerLineFrequency,
-    HueAuto, WhiteBalanceTemperature, Sharpness, BacklightCompensation, ChromaAgc, ColorKiller,
-    Colorfx, Autobrightness, BandStopFilter, Rotate, BgColor, ChromaGain, Illuminators1,
-    Illuminators2, MinBuffersForCapture, MinBuffersForOutput, AlphaComponent, ColorfxCbcr,
-    Custom(u32)
-}
-
-impl Into<u32> for CID {
-    fn into(self) -> u32 {
-        v4l2::CID_BASE + match self {
-            CID::Brightness => 0,
-            CID::Contrast => 1,
-            CID::Saturation => 2,
-            CID::Hue => 3,
-            CID::AudioVolume => 5,
-            CID::AudioBalance => 6,
-            CID::AudioBass => 7,
-            CID::AudioTreble => 8,
-            CID::AudioMute => 9,
-            CID::AudioLoudness => 10,
-            CID::BlackLevel => 11,
-            CID::AutoWhiteBalance => 12,
-            CID::DoWhiteBalance => 13,
-            CID::RedBalance => 14,
-            CID::BlueBalance => 15,
-            CID::Gamma => 16,
-            CID::Whiteness => 16,
-            CID::Exposure => 17,
-            CID::Autogain => 18,
-            CID::Gain => 19,
-            CID::Hflip => 20,
-            CID::Vflip => 21,
-            CID::PowerLineFrequency => 24,
-            CID::HueAuto => 25,
-            CID::WhiteBalanceTemperature => 26,
-            CID::Sharpness => 27,
-            CID::BacklightCompensation => 28,
-            CID::ChromaAgc => 29,
-            CID::ColorKiller => 30,
-            CID::Colorfx => 31,
-            CID::Autobrightness => 32,
-            CID::BandStopFilter => 33,
-            CID::Rotate => 34,
-            CID::BgColor => 35,
-            CID::ChromaGain => 36,
-            CID::Illuminators1 => 37,
-            CID::Illuminators2 => 38,
-            CID::MinBuffersForCapture => 39,
-            CID::MinBuffersForOutput => 40,
-            CID::AlphaComponent => 41,
-            CID::ColorfxCbcr => 42,
-            CID::Custom(id) => return id
-        }
+impl Settable for i64 {
+    fn uniform(&self) -> i64 {
+        *self
     }
 }
 
-pub enum Ctrl {
-    Brightness(i32),
-    Contrast(i32),
-    Saturation(i32),
-    Hue(i32),
-    AudioVolume(i32),
-    AudioBalance(i32),
-    AudioBass(i32),
-    AudioTreble(i32),
-    AudioMute(bool),
-    AudioLoudness(bool),
-    BlackLevel(i32),
-    AutoWhiteBalance(bool),
-    DoWhiteBalance,
-    RedBalance(i32),
-    BlueBalance(i32),
-    Gamma(i32),
-    Whiteness(i32),
-    Exposure(i32),
-    Autogain(bool),
-    Gain(i32),
-    Hflip(bool),
-    Vflip(bool),
-    PowerLineFrequencyDisabled,
-    PowerLineFrequency50hz,
-    PowerLineFrequency60hz,
-    PowerLineFrequencyAuto,
-    HueAuto(bool),
-    WhiteBalanceTemperature(i32),
-    Sharpness(i32),
-    BacklightCompensation(i32),
-    ChromaAgc(bool),
-    ColorKiller(bool),
-    ColorfxNone,
-    ColorfxBw,
-    ColorfxSepia,
-    ColorfxNegative,
-    ColorfxEmboss,
-    ColorfxSketch,
-    ColorfxSkyBlue,
-    ColorfxGrassGreen,
-    ColorfxSkinWhiten,
-    ColorfxVivid,
-    ColorfxAqua,
-    ColorfxArtFreeze,
-    ColorfxSilhouette,
-    ColorfxSolarization,
-    ColorfxAntique,
-    ColorfxSetCbcr,
-    Autobrightness(bool),
-    BandStopFilter(i32),
-    Rotate(i32),
-    BgColor(i32),
-    ChromaGain(i32),
-    Illuminators1(bool),
-    Illuminators2(bool),
-    MinBuffersForCapture(i32),
-    MinBuffersForOutput(i32),
-    AlphaComponent(i32),
-    ColorfxCbcr(i32)
+impl Settable for i32 {
+    fn uniform(&self) -> i64 {
+        *self as i64
+    }
 }
 
-impl Into<(u32, i32)> for Ctrl {
-    fn into(self) -> (u32, i32) {
-        use Ctrl::*;
-        let (cid, val) = match self {
-            Brightness(b) => (CID::Brightness, b),
-            Contrast(c) => (CID::Contrast, c),
-            Saturation(s) => (CID::Saturation, s),
-            Hue(h) => (CID::Hue, h),
-            AudioVolume(v) => (CID::AudioVolume, v),
-            AudioBalance(b) => (CID::AudioBalance, b),
-            AudioBass(b) => (CID::AudioBass, b),
-            AudioTreble(t) => (CID::AudioTreble, t),
-            AudioMute(m) => (CID::AudioMute, m as i32),
-            AudioLoudness(l) => (CID::AudioLoudness, l as i32) ,
-            BlackLevel(l) => (CID::BlackLevel, l),
-            AutoWhiteBalance(b) => (CID::AutoWhiteBalance, b as i32),
-            DoWhiteBalance => (CID::DoWhiteBalance, 0),
-            RedBalance(b) => (CID::RedBalance, b),
-            BlueBalance(b) => (CID::BlueBalance, b),
-            Gamma(g) => (CID::Gamma, g),
-            Whiteness(w) => (CID::Whiteness, w),
-            Exposure(e) => (CID::Exposure, e),
-            Autogain(a) => (CID::Brightness, a as i32),
-            Gain(g) => (CID::Gain, g),
-            Hflip(f) => (CID::Hflip, f as i32),
-            Vflip(f) => (CID::Vflip, f as i32),
-            PowerLineFrequencyDisabled => (CID::PowerLineFrequency, 0),
-            PowerLineFrequency50hz => (CID::PowerLineFrequency, 1),
-            PowerLineFrequency60hz => (CID::PowerLineFrequency, 2),
-            PowerLineFrequencyAuto => (CID::PowerLineFrequency, 3),
-            HueAuto(h) => (CID::HueAuto, h as i32),
-            WhiteBalanceTemperature(t) => (CID::WhiteBalanceTemperature, t),
-            Sharpness(s) => (CID::Sharpness, s),
-            BacklightCompensation(c) => (CID::BacklightCompensation, c),
-            ChromaAgc(a) => (CID::ChromaAgc, a as i32),
-            ColorKiller(k) => (CID::ColorKiller, k as i32),
-            ColorfxNone => (CID::Colorfx, 0),
-            ColorfxBw => (CID::Colorfx, 1),
-            ColorfxSepia => (CID::Colorfx, 2),
-            ColorfxNegative => (CID::Colorfx, 3),
-            ColorfxEmboss => (CID::Colorfx, 4),
-            ColorfxSketch => (CID::Colorfx, 5),
-            ColorfxSkyBlue => (CID::Colorfx, 6),
-            ColorfxGrassGreen => (CID::Colorfx, 7),
-            ColorfxSkinWhiten => (CID::Colorfx, 8),
-            ColorfxVivid => (CID::Colorfx, 9),
-            ColorfxAqua => (CID::Colorfx, 10),
-            ColorfxArtFreeze => (CID::Colorfx, 11),
-            ColorfxSilhouette => (CID::Colorfx, 12),
-            ColorfxSolarization => (CID::Colorfx, 13),
-            ColorfxAntique => (CID::Colorfx, 14),
-            ColorfxSetCbcr => (CID::Colorfx, 15),
-            Autobrightness(a) => (CID::Autobrightness, a as i32),
-            BandStopFilter(f) => (CID::BandStopFilter, f),
-            Rotate(r) => (CID::Rotate, r),
-            BgColor(c) => (CID::BgColor, c),
-            ChromaGain(g) => (CID::ChromaGain, g),
-            Illuminators1(i) => (CID::Illuminators1, i as i32),
-            Illuminators2(i) => (CID::Illuminators2, i as i32),
-            MinBuffersForCapture(b) => (CID::MinBuffersForCapture, b),
-            MinBuffersForOutput(b) => (CID::MinBuffersForOutput, b),
-            AlphaComponent(a) => (CID::AlphaComponent, a),
-            ColorfxCbcr(c) => (CID::ColorfxCbcr, c)
-        };
+impl Settable for u32 {
+    fn uniform(&self) -> i64 {
+        *self as i64
+    }
+}
 
-        (cid.into(), val)
+impl Settable for bool {
+    fn uniform(&self) -> i64 {
+        *self as i64
+    }
+}
+
+impl<'a> Settable for &'a str {
+    fn uniform(&self) -> i64 {
+        self.as_ptr() as i64
+    }
+}
+
+impl Settable for String {
+    fn uniform(&self) -> i64 {
+        self.as_ptr() as i64
     }
 }
 

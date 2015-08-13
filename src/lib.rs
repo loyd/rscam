@@ -499,7 +499,7 @@ impl Camera {
     /// Set value of the control.
     pub fn set_control<T: Settable>(&self, id: u32, value: T) -> io::Result<()> {
         let mut ctrl = v4l2::ExtControl::new(id, 0);
-        ctrl.value = value.uniform();
+        ctrl.value = value.unify();
         let mut ctrls = v4l2::ExtControls::new(id & v4l2::ID2CLASS, &mut ctrl);
         try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_S_EXT_CTRLS, &mut ctrls));
         Ok(())
@@ -704,41 +704,41 @@ impl<'a> Iterator for ControlIter<'a> {
 }
 
 pub trait Settable {
-    fn uniform(&self) -> i64;
+    fn unify(&self) -> i64;
 }
 
 impl Settable for i64 {
-    fn uniform(&self) -> i64 {
+    fn unify(&self) -> i64 {
         *self
     }
 }
 
 impl Settable for i32 {
-    fn uniform(&self) -> i64 {
+    fn unify(&self) -> i64 {
         *self as i64
     }
 }
 
 impl Settable for u32 {
-    fn uniform(&self) -> i64 {
+    fn unify(&self) -> i64 {
         *self as i64
     }
 }
 
 impl Settable for bool {
-    fn uniform(&self) -> i64 {
+    fn unify(&self) -> i64 {
         *self as i64
     }
 }
 
 impl<'a> Settable for &'a str {
-    fn uniform(&self) -> i64 {
+    fn unify(&self) -> i64 {
         self.as_ptr() as i64
     }
 }
 
 impl Settable for String {
-    fn uniform(&self) -> i64 {
+    fn unify(&self) -> i64 {
         self.as_ptr() as i64
     }
 }

@@ -413,6 +413,7 @@ impl Camera {
                     step: qectrl.step as i64
                 }
             },
+            v4l2::CTRL_TYPE_CTRL_CLASS => CtrlData::CtrlClass,
             v4l2::CTRL_TYPE_STRING => CtrlData::String {
                 value: try!(self.get_string_control(qctrl.id, qctrl.maximum as u32)),
                 minimum: qctrl.minimum as u32,
@@ -775,6 +776,7 @@ pub enum CtrlData {
         maximum: i64,
         step: i64
     },
+    CtrlClass,
     String {
         value: String,
         minimum: u32,

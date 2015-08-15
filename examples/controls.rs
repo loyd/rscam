@@ -9,10 +9,16 @@ fn main() {
 
     for wctrl in camera.controls() {
         let ctrl = wctrl.unwrap();
+
+        if let CtrlData::CtrlClass = ctrl.data {
+            println!("\n[{}]\n", ctrl.name);
+            continue;
+        }
+
         print!("{:>32} ", ctrl.name);
 
         if ctrl.flags & FLAG_DISABLED != 0 {
-            println!("disabled");
+            println!("(disabled)");
             continue;
         }
 
@@ -31,7 +37,7 @@ fn main() {
             CtrlData::IntegerMenu { value, default, ref items, .. } => {
                 println!("(intmenu) default={} value={}", default, value);
                 for item in items {
-                    println!("{:42} {}: {}", "", item.index, item.value);
+                    println!("{:42} {}: {} ({:#x})", "", item.index, item.value, item.value);
                 }
             },
             CtrlData::Bitmask { value, default, maximum } =>

@@ -475,6 +475,7 @@ pub const CTRL_TYPE_BOOLEAN: u32 = 2;
 pub const CTRL_TYPE_MENU: u32 = 3;
 pub const CTRL_TYPE_BUTTON: u32 = 4;
 pub const CTRL_TYPE_INTEGER64: u32 = 5;
+pub const CTRL_TYPE_CTRL_CLASS: u32 = 6;
 pub const CTRL_TYPE_STRING: u32 = 7;
 pub const CTRL_TYPE_BITMASK: u32 = 8;
 pub const CTRL_TYPE_INTEGER_MENU: u32 = 9;
@@ -515,7 +516,6 @@ pub mod pubconsts {
     pub const FLAG_EXECUTE_ON_WRITE: u32 = 0x0200;
 
     // Control classses.
-    pub const CLASS_ALL: u32 = 0;
     /// User controls.
     /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/control.html).
     pub const CLASS_USER: u32 = 0x00980000;
@@ -877,12 +877,10 @@ pub const VIDIOC_ENUM_FMT: usize = 3225441794;
 pub const VIDIOC_ENUM_FRAMEINTERVALS: usize = 3224655435;
 pub const VIDIOC_ENUM_FRAMESIZES: usize = 3224131146;
 pub const VIDIOC_G_CTRL: usize = 3221771803;
-pub const VIDIOC_G_EXT_CTRLS: usize = 3223344711;
 pub const VIDIOC_QUERYCTRL: usize = 3225703972;
 pub const VIDIOC_QUERY_EXT_CTRL: usize = 3236451943;
 pub const VIDIOC_QUERYMENU: usize = 3224131109;
 pub const VIDIOC_REQBUFS: usize = 3222558216;
-pub const VIDIOC_S_EXT_CTRLS: usize = 3223344712;
 pub const VIDIOC_S_PARM: usize = 3234616854;
 pub const VIDIOC_STREAMOFF: usize = 1074026003;
 pub const VIDIOC_STREAMON: usize = 1074026002;
@@ -907,6 +905,16 @@ pub const VIDIOC_S_FMT: usize = 3234878981;
 #[cfg(target_pointer_width = "32")]
 pub const VIDIOC_S_FMT: usize = 3234616837;
 
+#[cfg(target_pointer_width = "64")]
+pub const VIDIOC_G_EXT_CTRLS: usize = 3223344711;
+#[cfg(target_pointer_width = "32")]
+pub const VIDIOC_G_EXT_CTRLS: usize = 3222820423;
+
+#[cfg(target_pointer_width = "64")]
+pub const VIDIOC_S_EXT_CTRLS: usize = 3223344712;
+#[cfg(target_pointer_width = "32")]
+pub const VIDIOC_S_EXT_CTRLS: usize = 3222820424;
+
 #[test]
 fn test_sizes() {
     if cfg!(target_pointer_width = "64") {
@@ -930,5 +938,10 @@ fn test_sizes() {
     assert_eq!(mem::size_of::<QueryMenu>(), 44);
     assert_eq!(mem::size_of::<Control>(), 8);
     assert_eq!(mem::size_of::<ExtControl>(), 20);
-    assert_eq!(mem::size_of::<ExtControls>(), 32);
+
+    if cfg!(target_pointer_width = "64") {
+        assert_eq!(mem::size_of::<ExtControls>(), 32);
+    } else {
+        assert_eq!(mem::size_of::<ExtControls>(), 24);
+    }
 }

@@ -505,15 +505,28 @@ pub mod pubconsts {
 	pub const FIELD_INTERLACED_BT: u32 = 9;
 
     // Control flags.
+    /// This control is permanently disabled and should be ignored by the application.
     pub const FLAG_DISABLED: u32 = 0x0001;
+    /// This control is temporarily unchangeable (e.g. another application controls resource).
     pub const FLAG_GRABBED: u32 = 0x0002;
+    /// This control is permanently readable only.
     pub const FLAG_READ_ONLY: u32 = 0x0004;
+    /// Changing this control may affect the value of other controls within the same control class.
     pub const FLAG_UPDATE: u32 = 0x0008;
+    /// This control is not applicable to the current configuration.
     pub const FLAG_INACTIVE: u32 = 0x0010;
+    /// A hint that this control is best represented as a slider-like element in a user interface.
     pub const FLAG_SLIDER: u32 = 0x0020;
+    /// This control is permanently writable only.
     pub const FLAG_WRITE_ONLY: u32 = 0x0040;
+    /// This control is volatile, which means that the value of the control changes continuously.
+    /// A typical example would be the current gain value if the device is in auto-gain mode.
     pub const FLAG_VOLATILE: u32 = 0x0080;
+    /// This control has a pointer type.
     pub const FLAG_HAS_PAYLOAD: u32 = 0x0100;
+    /// The value provided to the control will be propagated to the driver even if it remains
+    /// constant. This is required when the control represents an action on the hardware.
+    /// For example: clearing an error flag or triggering the flash.
     pub const FLAG_EXECUTE_ON_WRITE: u32 = 0x0200;
 
     // Control classses.

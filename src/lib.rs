@@ -41,7 +41,8 @@ use std::sync::Arc;
 
 use v4l2::MappedRegion;
 
-pub use v4l2::pubconsts::*;
+pub use v4l2::pubconsts as consts;
+pub use consts::*;
 
 
 pub type Result<T> = result::Result<T, Error>;
@@ -748,6 +749,7 @@ pub struct Control {
     pub id: u32,
     pub name: String,
     pub data: CtrlData,
+    /// See `FLAG_*` constants for details.
     pub flags: u32
 }
 

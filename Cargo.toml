@@ -1,6 +1,6 @@
 [package]
 name = "rscam"
-version = "0.5.0"
+version = "0.5.1"
 description = "Wrapper for v4l2."
 keywords = ["v4l2", "video", "camera", "capture"]
 authors = ["Paul Loyd <pavelko95@gmail.com>"]

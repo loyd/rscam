@@ -98,7 +98,7 @@ unsafe impl Sync for MappedRegion {}
 
 impl Drop for MappedRegion {
     fn drop(&mut self) {
-        unsafe { ll::munmap(*self.ptr as *mut c_void, self.len as size_t); }
+        unsafe { ll::munmap(self.ptr as *mut c_void, self.len as size_t); }
     }
 }
 

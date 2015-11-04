@@ -5,8 +5,7 @@ use std::{io, mem, usize};
 // C types and constants.
 use libc::{c_void, c_ulong, size_t, off_t};
 use libc::timeval as Timeval;
-use libc::{O_RDWR, PROT_READ, PROT_WRITE};
-use libc::{MAP_SHARED};
+use libc::{O_RDWR, PROT_READ, PROT_WRITE, MAP_SHARED};
 
 
 #[cfg(not(feature = "no_wrapper"))]
@@ -26,7 +25,7 @@ mod ll {
         pub fn v4l2_close(fd: RawFd) -> c_int;
         pub fn v4l2_ioctl(fd: RawFd, request: c_ulong, argp: *mut c_void) -> c_int;
         pub fn v4l2_mmap(start: *mut c_void, length: size_t, prot: c_int,
-                     flags: c_int, fd: RawFd, offset: off_t) -> *mut c_void;
+                         flags: c_int, fd: RawFd, offset: off_t) -> *mut c_void;
         pub fn v4l2_munmap(start: *mut c_void, length: size_t) -> c_int;
     }
 }
@@ -484,25 +483,25 @@ pub const CTRL_TYPE_INTEGER_MENU: u32 = 9;
 pub mod pubconsts {
     // Fields.
     /// None, top, bottom or interplaced depending on whatever it thinks is approximate.
-	pub const FIELD_ANY: u32 = 0;
+    pub const FIELD_ANY: u32 = 0;
     /// This device has no fields.
-	pub const FIELD_NONE: u32 = 1;
+    pub const FIELD_NONE: u32 = 1;
     /// Top field only.
-	pub const FIELD_TOP: u32 = 2;
+    pub const FIELD_TOP: u32 = 2;
     /// Bottom field only.
-	pub const FIELD_BOTTOM: u32 = 3;
+    pub const FIELD_BOTTOM: u32 = 3;
     /// Both fields interplaced.
-	pub const FIELD_INTERLACED: u32 = 4;
+    pub const FIELD_INTERLACED: u32 = 4;
     /// Both fields sequential into one buffer, top-bottom order.
-	pub const FIELD_SEQ_TB: u32 = 5;
+    pub const FIELD_SEQ_TB: u32 = 5;
     /// Both fields sequential into one buffer, bottom-top order.
-	pub const FIELD_SEQ_BT: u32 = 6;
+    pub const FIELD_SEQ_BT: u32 = 6;
     /// Both fields alternating into separate buffers.
-	pub const FIELD_ALTERNATE: u32 = 7;
+    pub const FIELD_ALTERNATE: u32 = 7;
     /// Both fields interplaced, top field first and the top field is transmitted first.
-	pub const FIELD_INTERLACED_TB: u32 = 8;
+    pub const FIELD_INTERLACED_TB: u32 = 8;
     /// Both fields interplaced, top field first and the bottom field is transmitted first.
-	pub const FIELD_INTERLACED_BT: u32 = 9;
+    pub const FIELD_INTERLACED_BT: u32 = 9;
 
     // Control flags.
     /// This control is permanently disabled and should be ignored by the application.

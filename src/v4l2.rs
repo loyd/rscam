@@ -6,7 +6,7 @@ use std::{io, mem, usize};
 use libc::{c_void, c_ulong, size_t, off_t};
 use libc::timeval as Timeval;
 use libc::{O_RDWR, PROT_READ, PROT_WRITE};
-use libc::consts::os::posix88::{MAP_SHARED};
+use libc::{MAP_SHARED};
 
 
 #[cfg(not(feature = "no_wrapper"))]

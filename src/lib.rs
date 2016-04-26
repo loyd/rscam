@@ -461,7 +461,7 @@ impl Camera {
     fn get_menu_items(&self, id: u32, min: u32, max: u32) -> io::Result<Vec<CtrlMenuItem>> {
         let mut items = vec![];
         let mut qmenu = v4l2::QueryMenu::new(id);
-        for index in (min..max+1) {
+        for index in min..max+1 {
             qmenu.index = index as u32;
             if try!(v4l2::xioctl_valid(self.fd, v4l2::VIDIOC_QUERYMENU, &mut qmenu)) {
                 items.push(CtrlMenuItem {
@@ -476,7 +476,7 @@ impl Camera {
     fn get_int_menu_items(&self, id: u32, min: u32, max: u32) -> io::Result<Vec<CtrlIntMenuItem>> {
         let mut items = vec![];
         let mut qmenu = v4l2::QueryMenu::new(id);
-        for index in (min..max+1) {
+        for index in min..max+1 {
             qmenu.index = index as u32;
             if try!(v4l2::xioctl_valid(self.fd, v4l2::VIDIOC_QUERYMENU, &mut qmenu)) {
                 items.push(CtrlIntMenuItem {

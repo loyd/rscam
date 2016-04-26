@@ -1235,8 +1235,14 @@ pub const VIDIOC_QUERY_EXT_CTRL: usize = 3236451943;
 pub const VIDIOC_QUERYMENU: usize = 3224131109;
 pub const VIDIOC_REQBUFS: usize = 3222558216;
 pub const VIDIOC_S_PARM: usize = 3234616854;
+#[cfg(target_os = "linux")]
 pub const VIDIOC_STREAMOFF: usize = 1074026003;
+#[cfg(target_os = "freebsd")]
+pub const VIDIOC_STREAMOFF: usize = 2147767827;
+#[cfg(target_os = "linux")]
 pub const VIDIOC_STREAMON: usize = 1074026002;
+#[cfg(target_os = "freebsd")]
+pub const VIDIOC_STREAMON: usize = 2147767826;
 
 #[cfg(target_pointer_width = "64")]
 pub const VIDIOC_DQBUF: usize = 3227014673;

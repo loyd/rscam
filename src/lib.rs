@@ -241,6 +241,15 @@ pub struct Frame {
     buffer: v4l2::Buffer
 }
 
+impl Frame {
+    /// Return frame timestamp in microseconds using monotonically
+    /// nondecreasing clock
+    pub fn get_timestamp(&self) -> u64 {
+        let t = self.buffer.timestamp;
+        1_000_000*(t.tv_sec as u64) + (t.tv_usec as u64)
+    }
+}
+
 impl Deref for Frame {
     type Target = [u8];
 

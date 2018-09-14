@@ -48,7 +48,7 @@ macro_rules! check_io(
 );
 
 pub fn open(file: &str) -> io::Result<RawFd> {
-    let c_str = try!(CString::new(file));
+    let c_str = CString::new(file)?;
     let fd = unsafe { ll::open(c_str.as_ptr(), O_RDWR, 0) };
     check_io!(fd != -1);
     Ok(fd)

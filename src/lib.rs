@@ -41,9 +41,8 @@ use std::sync::Arc;
 
 use v4l2::MappedRegion;
 
-pub use v4l2::pubconsts as consts;
 pub use consts::*;
-
+pub use v4l2::pubconsts as consts;
 
 pub type Result<T> = result::Result<T, Error>;
 
@@ -58,7 +57,7 @@ pub enum Error {
     /// Unsupported format of pixels.
     BadFormat,
     /// Unsupported field.
-    BadField
+    BadField,
 }
 
 impl fmt::Display for Error {
@@ -66,9 +65,11 @@ impl fmt::Display for Error {
         match *self {
             Error::Io(ref err) => write!(f, "I/O error: {}", err),
             Error::BadInterval => write!(f, "Invalid or unsupported frame interval"),
-            Error::BadResolution => write!(f, "Invalid or unsupported resolution (width and/or height)"),
+            Error::BadResolution => {
+                write!(f, "Invalid or unsupported resolution (width and/or height)")
+            }
             Error::BadFormat => write!(f, "Invalid or unsupported format of pixels"),
-            Error::BadField => write!(f, "Invalid or unsupported field")
+            Error::BadField => write!(f, "Invalid or unsupported field"),
         }
     }
 }
@@ -80,7 +81,7 @@ impl error::Error for Error {
             Error::BadInterval => "bad interval",
             Error::BadResolution => "bad resolution",
             Error::BadFormat => "bad format",
-            Error::BadField => "bad field"
+            Error::BadField => "bad field",
         }
     }
 
@@ -115,7 +116,7 @@ pub struct Config<'a> {
     pub field: u32,
     /// Number of buffers in the queue of camera.
     /// Default is `2`.
-    pub nbuffers: u32
+    pub nbuffers: u32,
 }
 
 impl<'a> Default for Config<'a> {
@@ -125,7 +126,7 @@ impl<'a> Default for Config<'a> {
             resolution: (640, 480),
             format: b"YUYV",
             field: FIELD_NONE,
-            nbuffers: 2
+            nbuffers: 2,
         }
     }
 }
@@ -138,7 +139,7 @@ pub struct FormatInfo {
     /// Raw or compressed.
     pub compressed: bool,
     /// Whether it's transcoded from a different input format.
-    pub emulated: bool
+    pub emulated: bool,
 }
 
 impl FormatInfo {
@@ -148,11 +149,11 @@ impl FormatInfo {
                 (fourcc >> 0 & 0xff) as u8,
                 (fourcc >> 8 & 0xff) as u8,
                 (fourcc >> 16 & 0xff) as u8,
-                (fourcc >> 24 & 0xff) as u8
+                (fourcc >> 24 & 0xff) as u8,
             ],
             description: buffer_to_string(desc),
             compressed: flags & v4l2::FMT_FLAG_COMPRESSED != 0,
-            emulated: flags & v4l2::FMT_FLAG_EMULATED != 0
+            emulated: flags & v4l2::FMT_FLAG_EMULATED != 0,
         }
     }
 
@@ -163,13 +164,16 @@ impl FormatInfo {
 
 impl fmt::Debug for FormatInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} ({}{})", str::from_utf8(self.format.as_ref()).unwrap(),
-            self.description, match (self.compressed, self.emulated) {
-                (true, true) => ", compressed, emulated",
-                (true, false) => ", compressed",
-                (false, true) => ", emulated",
-                _ => ""
-            })
+        let format = str::from_utf8(self.format.as_ref()).unwrap();
+
+        let flags = match (self.compressed, self.emulated) {
+            (true, true) => ", compressed, emulated",
+            (true, false) => ", compressed",
+            (false, true) => ", emulated",
+            _ => "",
+        };
+
+        write!(f, "{} ({}{})", format, self.description, flags)
     }
 }
 
@@ -178,8 +182,8 @@ pub enum ResolutionInfo {
     Stepwise {
         min: (u32, u32),
         max: (u32, u32),
-        step: (u32, u32)
-    }
+        step: (u32, u32),
+    },
 }
 
 impl fmt::Debug for ResolutionInfo {
@@ -193,10 +197,12 @@ impl fmt::Debug for ResolutionInfo {
                 }
 
                 Ok({})
-            },
-            ResolutionInfo::Stepwise {min, max, step} =>
-                write!(f, "Stepwise from {}x{} to {}x{} by {}x{}",
-                    min.0, min.1, max.0, max.1, step.0, step.1)
+            }
+            ResolutionInfo::Stepwise { min, max, step } => write!(
+                f,
+                "Stepwise from {}x{} to {}x{} by {}x{}",
+                min.0, min.1, max.0, max.1, step.0, step.1
+            ),
         }
     }
 }
@@ -206,25 +212,29 @@ pub enum IntervalInfo {
     Stepwise {
         min: (u32, u32),
         max: (u32, u32),
-        step: (u32, u32)
-    }
+        step: (u32, u32),
+    },
 }
 
 impl fmt::Debug for IntervalInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             IntervalInfo::Discretes(ref d) => {
-                try!(write!(f, "Discretes: {}fps", d[0].1/d[0].0));
+                try!(write!(f, "Discretes: {}fps", d[0].1 / d[0].0));
 
                 for res in (&d[1..]).iter() {
-                    try!(write!(f, ", {}fps", res.1/res.0));
+                    try!(write!(f, ", {}fps", res.1 / res.0));
                 }
 
                 Ok({})
-            },
-            IntervalInfo::Stepwise {min, max, step} =>
-                write!(f, "Stepwise from {}fps to {}fps by {}fps",
-                    max.1/max.0, min.1/min.0, step.1/step.0)
+            }
+            IntervalInfo::Stepwise { min, max, step } => write!(
+                f,
+                "Stepwise from {}fps to {}fps by {}fps",
+                max.1 / max.0,
+                min.1 / min.0,
+                step.1 / step.0
+            ),
         }
     }
 }
@@ -238,7 +248,7 @@ pub struct Frame {
     region: Arc<MappedRegion>,
     length: u32,
     fd: RawFd,
-    buffer: v4l2::Buffer
+    buffer: v4l2::Buffer,
 }
 
 impl Frame {
@@ -246,7 +256,7 @@ impl Frame {
     /// nondecreasing clock
     pub fn get_timestamp(&self) -> u64 {
         let t = self.buffer.timestamp;
-        1_000_000*(t.tv_sec as u64) + (t.tv_usec as u64)
+        1_000_000 * (t.tv_sec as u64) + (t.tv_usec as u64)
     }
 }
 
@@ -268,7 +278,7 @@ impl Drop for Frame {
 enum State {
     Idle,
     Streaming,
-    Aborted
+    Aborted,
 }
 
 pub struct Camera {
@@ -276,7 +286,7 @@ pub struct Camera {
     state: State,
     resolution: (u32, u32),
     format: [u8; 4],
-    buffers: Vec<Arc<MappedRegion>>
+    buffers: Vec<Arc<MappedRegion>>,
 }
 
 impl Camera {
@@ -286,13 +296,16 @@ impl Camera {
             state: State::Idle,
             resolution: (0, 0),
             format: [0; 4],
-            buffers: vec![]
+            buffers: vec![],
         })
     }
 
     /// Get detailed info about the available formats.
     pub fn formats(&self) -> FormatIter {
-        FormatIter { camera: self, index: 0 }
+        FormatIter {
+            camera: self,
+            index: 0,
+        }
     }
 
     /// Get detailed info about the available resolutions.
@@ -304,7 +317,11 @@ impl Camera {
         let fourcc = FormatInfo::fourcc(format);
         let mut size = v4l2::Frmsizeenum::new(fourcc);
 
-        try!(v4l2::xioctl_valid(self.fd, v4l2::VIDIOC_ENUM_FRAMESIZES, &mut size));
+        try!(v4l2::xioctl_valid(
+            self.fd,
+            v4l2::VIDIOC_ENUM_FRAMESIZES,
+            &mut size
+        ));
 
         if fourcc != size.pixelformat {
             return Err(Error::BadFormat);
@@ -314,7 +331,11 @@ impl Camera {
             let mut discretes = vec![(size.discrete().width, size.discrete().height)];
             size.index = 1;
 
-            while try!(v4l2::xioctl_valid(self.fd, v4l2::VIDIOC_ENUM_FRAMESIZES, &mut size)) {
+            while try!(v4l2::xioctl_valid(
+                self.fd,
+                v4l2::VIDIOC_ENUM_FRAMESIZES,
+                &mut size
+            )) {
                 {
                     let discrete = size.discrete();
                     discretes.push((discrete.width, discrete.height));
@@ -329,7 +350,7 @@ impl Camera {
             Ok(ResolutionInfo::Stepwise {
                 min: (sw.min_width, sw.min_height),
                 max: (sw.max_width, sw.max_height),
-                step: (sw.step_width, sw.step_height)
+                step: (sw.step_width, sw.step_height),
             })
         }
     }
@@ -343,7 +364,11 @@ impl Camera {
         let fourcc = FormatInfo::fourcc(format);
         let mut ival = v4l2::Frmivalenum::new(fourcc, resolution);
 
-        try!(v4l2::xioctl_valid(self.fd, v4l2::VIDIOC_ENUM_FRAMEINTERVALS, &mut ival));
+        try!(v4l2::xioctl_valid(
+            self.fd,
+            v4l2::VIDIOC_ENUM_FRAMEINTERVALS,
+            &mut ival
+        ));
 
         if fourcc != ival.pixelformat {
             return Err(Error::BadFormat);
@@ -357,7 +382,11 @@ impl Camera {
             let mut discretes = vec![(ival.discrete().numerator, ival.discrete().denominator)];
             ival.index = 1;
 
-            while try!(v4l2::xioctl_valid(self.fd, v4l2::VIDIOC_ENUM_FRAMEINTERVALS, &mut ival)) {
+            while try!(v4l2::xioctl_valid(
+                self.fd,
+                v4l2::VIDIOC_ENUM_FRAMEINTERVALS,
+                &mut ival
+            )) {
                 {
                     let discrete = ival.discrete();
                     discretes.push((discrete.numerator, discrete.denominator));
@@ -372,19 +401,27 @@ impl Camera {
             Ok(IntervalInfo::Stepwise {
                 min: (sw.min.numerator, sw.min.denominator),
                 max: (sw.max.numerator, sw.max.denominator),
-                step: (sw.step.numerator, sw.step.denominator)
+                step: (sw.step.numerator, sw.step.denominator),
             })
         }
     }
 
     /// Get info about all controls.
     pub fn controls(&self) -> ControlIter {
-        ControlIter { camera: self, id: 0, class: 0 }
+        ControlIter {
+            camera: self,
+            id: 0,
+            class: 0,
+        }
     }
 
     /// Get info about available controls by class (see `CLASS_*` constants).
     pub fn controls_by_class(&self, class: u32) -> ControlIter {
-        ControlIter { camera: self, id: class as u32, class: class }
+        ControlIter {
+            camera: self,
+            id: class as u32,
+            class: class,
+        }
     }
 
     /// Get info about the control by id.
@@ -398,57 +435,67 @@ impl Camera {
                 default: qctrl.default_value,
                 minimum: qctrl.minimum,
                 maximum: qctrl.maximum,
-                step: qctrl.step
+                step: qctrl.step,
             },
             v4l2::CTRL_TYPE_BOOLEAN => CtrlData::Boolean {
                 value: try!(self.get_control_value(qctrl.id)) != 0,
-                default: qctrl.default_value != 0
+                default: qctrl.default_value != 0,
             },
             v4l2::CTRL_TYPE_MENU => CtrlData::Menu {
                 value: try!(self.get_control_value(qctrl.id)) as u32,
                 default: qctrl.default_value as u32,
-                items: try!(self.get_menu_items(qctrl.id, qctrl.minimum as u32,
-                                                qctrl.maximum as u32))
+                items: try!(self.get_menu_items(
+                    qctrl.id,
+                    qctrl.minimum as u32,
+                    qctrl.maximum as u32
+                )),
             },
             v4l2::CTRL_TYPE_BUTTON => CtrlData::Button,
             v4l2::CTRL_TYPE_INTEGER64 => {
                 let mut qectrl = v4l2::QueryExtCtrl::new(qctrl.id);
-                try!(v4l2::xioctl(self.fd, v4l2::VIDIOC_QUERY_EXT_CTRL, &mut qectrl));
+                try!(v4l2::xioctl(
+                    self.fd,
+                    v4l2::VIDIOC_QUERY_EXT_CTRL,
+                    &mut qectrl
+                ));
 
                 CtrlData::Integer64 {
                     value: try!(self.get_ext_control_value(qctrl.id)),
                     default: qectrl.default_value,
                     minimum: qectrl.minimum,
                     maximum: qectrl.maximum,
-                    step: qectrl.step as i64
+                    step: qectrl.step as i64,
                 }
-            },
+            }
             v4l2::CTRL_TYPE_CTRL_CLASS => CtrlData::CtrlClass,
             v4l2::CTRL_TYPE_STRING => CtrlData::String {
                 value: try!(self.get_string_control(qctrl.id, qctrl.maximum as u32)),
                 minimum: qctrl.minimum as u32,
                 maximum: qctrl.maximum as u32,
-                step: qctrl.step as u32
+                step: qctrl.step as u32,
             },
             v4l2::CTRL_TYPE_BITMASK => CtrlData::Bitmask {
                 value: try!(self.get_control_value(qctrl.id)) as u32,
                 default: qctrl.default_value as u32,
-                maximum: qctrl.maximum as u32
+                maximum: qctrl.maximum as u32,
             },
             v4l2::CTRL_TYPE_INTEGER_MENU => CtrlData::IntegerMenu {
                 value: try!(self.get_control_value(qctrl.id)) as u32,
                 default: qctrl.default_value as u32,
-                items: try!(self.get_int_menu_items(qctrl.id, qctrl.minimum as u32,
-                                                    qctrl.maximum as u32))
+                items: try!(self.get_int_menu_items(
+                    qctrl.id,
+                    qctrl.minimum as u32,
+                    qctrl.maximum as u32
+                )),
             },
-            _ => CtrlData::Unknown
+            _ => CtrlData::Unknown,
         };
 
         Ok(Control {
             id: qctrl.id,
             name: buffer_to_string(&qctrl.name),
             data: data,
-            flags: qctrl.flags
+            flags: qctrl.flags,
         })
     }
 
@@ -470,12 +517,16 @@ impl Camera {
     fn get_menu_items(&self, id: u32, min: u32, max: u32) -> io::Result<Vec<CtrlMenuItem>> {
         let mut items = vec![];
         let mut qmenu = v4l2::QueryMenu::new(id);
-        for index in min..max+1 {
+        for index in min..max + 1 {
             qmenu.index = index as u32;
-            if try!(v4l2::xioctl_valid(self.fd, v4l2::VIDIOC_QUERYMENU, &mut qmenu)) {
+            if try!(v4l2::xioctl_valid(
+                self.fd,
+                v4l2::VIDIOC_QUERYMENU,
+                &mut qmenu
+            )) {
                 items.push(CtrlMenuItem {
                     index: index,
-                    name: buffer_to_string(&qmenu.name)
+                    name: buffer_to_string(&qmenu.name),
                 });
             }
         }
@@ -485,12 +536,16 @@ impl Camera {
     fn get_int_menu_items(&self, id: u32, min: u32, max: u32) -> io::Result<Vec<CtrlIntMenuItem>> {
         let mut items = vec![];
         let mut qmenu = v4l2::QueryMenu::new(id);
-        for index in min..max+1 {
+        for index in min..max + 1 {
             qmenu.index = index as u32;
-            if try!(v4l2::xioctl_valid(self.fd, v4l2::VIDIOC_QUERYMENU, &mut qmenu)) {
+            if try!(v4l2::xioctl_valid(
+                self.fd,
+                v4l2::VIDIOC_QUERYMENU,
+                &mut qmenu
+            )) {
                 items.push(CtrlIntMenuItem {
                     index: index,
-                    value: *qmenu.value()
+                    value: *qmenu.value(),
                 });
             }
         }
@@ -533,7 +588,12 @@ impl Camera {
         }
 
         self.resolution = config.resolution;
-        self.format = [config.format[0], config.format[1], config.format[2], config.format[3]];
+        self.format = [
+            config.format[0],
+            config.format[1],
+            config.format[2],
+            config.format[3],
+        ];
 
         self.state = State::Streaming;
 
@@ -559,7 +619,7 @@ impl Camera {
             region: self.buffers[buf.index as usize].clone(),
             length: buf.bytesused,
             fd: self.fd,
-            buffer: buf
+            buffer: buf,
         })
     }
 
@@ -612,7 +672,7 @@ impl Camera {
         match (time.numerator * interval.1, time.denominator * interval.0) {
             (0, _) | (_, 0) => Err(Error::BadInterval),
             (x, y) if x != y => Err(Error::BadInterval),
-            _ => Ok(())
+            _ => Ok(()),
         }
     }
 
@@ -671,7 +731,7 @@ impl Drop for Camera {
 
 pub struct FormatIter<'a> {
     camera: &'a Camera,
-    index: u32
+    index: u32,
 }
 
 impl<'a> Iterator for FormatIter<'a> {
@@ -684,10 +744,14 @@ impl<'a> Iterator for FormatIter<'a> {
         match v4l2::xioctl_valid(self.camera.fd, v4l2::VIDIOC_ENUM_FMT, &mut fmt) {
             Ok(true) => {
                 self.index += 1;
-                Some(Ok(FormatInfo::new(fmt.pixelformat, &fmt.description, fmt.flags)))
-            },
+                Some(Ok(FormatInfo::new(
+                    fmt.pixelformat,
+                    &fmt.description,
+                    fmt.flags,
+                )))
+            }
             Ok(false) => None,
-            Err(err) => Some(Err(err))
+            Err(err) => Some(Err(err)),
         }
     }
 }
@@ -695,7 +759,7 @@ impl<'a> Iterator for FormatIter<'a> {
 pub struct ControlIter<'a> {
     camera: &'a Camera,
     id: u32,
-    class: u32
+    class: u32,
 }
 
 impl<'a> Iterator for ControlIter<'a> {
@@ -708,8 +772,8 @@ impl<'a> Iterator for ControlIter<'a> {
             Ok(ctrl) => {
                 self.id = ctrl.id;
                 Some(Ok(ctrl))
-            },
-            err @ Err(_) => Some(err)
+            }
+            err @ Err(_) => Some(err),
         }
     }
 }
@@ -759,7 +823,7 @@ pub struct Control {
     pub name: String,
     pub data: CtrlData,
     /// See `FLAG_*` constants for details.
-    pub flags: u32
+    pub flags: u32,
 }
 
 pub enum CtrlData {
@@ -768,16 +832,16 @@ pub enum CtrlData {
         default: i32,
         minimum: i32,
         maximum: i32,
-        step: i32
+        step: i32,
     },
     Boolean {
         value: bool,
-        default: bool
+        default: bool,
     },
     Menu {
         value: u32,
         default: u32,
-        items: Vec<CtrlMenuItem>
+        items: Vec<CtrlMenuItem>,
     },
     Button,
     Integer64 {
@@ -785,43 +849,43 @@ pub enum CtrlData {
         default: i64,
         minimum: i64,
         maximum: i64,
-        step: i64
+        step: i64,
     },
     CtrlClass,
     String {
         value: String,
         minimum: u32,
         maximum: u32,
-        step: u32
+        step: u32,
     },
     Bitmask {
         value: u32,
         default: u32,
-        maximum: u32
+        maximum: u32,
     },
     IntegerMenu {
         value: u32,
         default: u32,
-        items: Vec<CtrlIntMenuItem>
+        items: Vec<CtrlIntMenuItem>,
     },
-    Unknown
+    Unknown,
 }
 
 pub struct CtrlMenuItem {
     pub index: u32,
-    pub name: String
+    pub name: String,
 }
 
 pub struct CtrlIntMenuItem {
     pub index: u32,
-    pub value: i64
+    pub value: i64,
 }
 
 fn buffer_to_string(buf: &[u8]) -> String {
     // Instead of unstable `position_elem()`.
     String::from_utf8_lossy(match buf.iter().position(|&c| c == 0) {
         Some(x) => &buf[..x],
-        None    => buf
+        None => buf,
     }).into_owned()
 }
 

@@ -1,17 +1,18 @@
 extern crate rscam;
 
-use rscam::{Camera, Control, CtrlData};
 use rscam::CID_BRIGHTNESS;
-
+use rscam::{Camera, Control, CtrlData};
 
 fn main() {
     let camera = Camera::new("/dev/video0").unwrap();
 
-    let get_brightness = ||
-        match camera.get_control(CID_BRIGHTNESS) {
-            Ok(Control { data: CtrlData::Integer { value: b, .. }, .. }) => b,
-            _ => panic!()
-        };
+    let get_brightness = || match camera.get_control(CID_BRIGHTNESS) {
+        Ok(Control {
+            data: CtrlData::Integer { value: b, .. },
+            ..
+        }) => b,
+        _ => panic!(),
+    };
 
     let old = get_brightness();
 

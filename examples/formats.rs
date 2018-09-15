@@ -2,7 +2,6 @@ extern crate rscam;
 
 use rscam::{Camera, ResolutionInfo};
 
-
 fn main() {
     let camera = Camera::new("/dev/video0").unwrap();
 
@@ -14,8 +13,12 @@ fn main() {
 
         if let ResolutionInfo::Discretes(d) = resolutions {
             for resol in &d {
-                println!("  {}x{}  {:?}", resol.0, resol.1,
-                    camera.intervals(&format.format, *resol).unwrap());
+                println!(
+                    "  {}x{}  {:?}",
+                    resol.0,
+                    resol.1,
+                    camera.intervals(&format.format, *resol).unwrap()
+                );
             }
         } else {
             println!("  {:?}", resolutions);

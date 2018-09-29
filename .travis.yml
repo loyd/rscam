@@ -1,0 +1,12 @@
+language: rust
+rust:
+    - stable
+before_script:
+    - rustup component add clippy-preview
+    - rustup component add rustfmt-preview
+script:
+    - cargo clippy --version
+    - cargo clippy --all-targets --all-features -- -D warnings
+    - cargo fmt --version
+    - cargo fmt -- --check
+    - cargo build --all-targets --features no_wrapper

@@ -24,6 +24,9 @@
 //! The wrapper uses v4l2 (e.g. `v4l2_ioctl()` instead of `ioctl()`) until feature `no_wrapper` is
 //! enabled. The feature can be useful when it's desirable to avoid dependence on *libv4l2*.
 
+#[cfg(not(any(target_os = "linux", target_os = "freebsd")))]
+compile_error!("rscam (v4l2) is for linux/freebsd only");
+
 extern crate libc;
 
 mod v4l2;

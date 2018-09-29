@@ -1,5 +1,6 @@
 use std::ffi::CString;
 use std::os::unix::io::RawFd;
+use std::ptr::null_mut;
 use std::{io, mem, usize};
 
 // C types and constants.
@@ -111,7 +112,7 @@ impl Drop for MappedRegion {
 pub fn mmap(length: usize, fd: RawFd, offset: usize) -> io::Result<MappedRegion> {
     let ptr = unsafe {
         ll::mmap(
-            0 as *mut c_void,
+            null_mut(),
             length as size_t,
             PROT_READ | PROT_WRITE,
             MAP_SHARED,
@@ -307,11 +308,11 @@ impl Frmsizeenum {
     }
 
     pub fn discrete(&mut self) -> &mut FrmsizeDiscrete {
-        unsafe { mem::transmute(self.data.as_mut_ptr()) }
+        unsafe { &mut *(self.data.as_mut_ptr() as *mut FrmsizeDiscrete) }
     }
 
     pub fn stepwise(&mut self) -> &mut FrmsizeStepwise {
-        unsafe { mem::transmute(self.data.as_mut_ptr()) }
+        unsafe { &mut *(self.data.as_mut_ptr() as *mut FrmsizeStepwise) }
     }
 }
 
@@ -352,11 +353,11 @@ impl Frmivalenum {
     }
 
     pub fn discrete(&mut self) -> &mut Fract {
-        unsafe { mem::transmute(self.data.as_mut_ptr()) }
+        unsafe { &mut *(self.data.as_mut_ptr() as *mut Fract) }
     }
 
     pub fn stepwise(&mut self) -> &mut FrmivalStepwise {
-        unsafe { mem::transmute(self.data.as_mut_ptr()) }
+        unsafe { &mut *(self.data.as_mut_ptr() as *mut FrmivalStepwise) }
     }
 }
 
@@ -443,7 +444,7 @@ pub struct Control {
 
 impl Control {
     pub fn new(id: u32) -> Control {
-        Control { id: id, value: 0 }
+        Control { id, value: 0 }
     }
 }
 
@@ -458,8 +459,8 @@ pub struct ExtControl {
 impl ExtControl {
     pub fn new(id: u32, size: u32) -> ExtControl {
         ExtControl {
-            id: id,
-            size: size,
+            id,
+            size,
             reserved: 0,
             value: 0,
         }
@@ -598,7 +599,7 @@ pub mod pubconsts {
     pub const CID_BASE: u32 = CLASS_USER | 0x900;
     pub const CID_USER_BASE: u32 = CID_BASE;
     pub const CID_USER_CLASS: u32 = CLASS_USER | 1;
-    pub const CID_BRIGHTNESS: u32 = CID_BASE + 0;
+    pub const CID_BRIGHTNESS: u32 = CID_BASE;
     pub const CID_CONTRAST: u32 = CID_BASE + 1;
     pub const CID_SATURATION: u32 = CID_BASE + 2;
     pub const CID_HUE: u32 = CID_BASE + 3;
@@ -669,7 +670,7 @@ pub mod pubconsts {
     pub const CID_USER_ADV7180_BASE: u32 = CID_USER_BASE + 0x1070;
     pub const CID_MPEG_BASE: u32 = CLASS_MPEG | 0x900;
     pub const CID_MPEG_CLASS: u32 = CLASS_MPEG | 1;
-    pub const CID_MPEG_STREAM_TYPE: u32 = CID_MPEG_BASE + 0;
+    pub const CID_MPEG_STREAM_TYPE: u32 = CID_MPEG_BASE;
     pub const MPEG_STREAM_TYPE_MPEG2_PS: u32 = 0;
     pub const MPEG_STREAM_TYPE_MPEG2_TS: u32 = 1;
     pub const MPEG_STREAM_TYPE_MPEG1_SS: u32 = 2;
@@ -984,7 +985,7 @@ pub mod pubconsts {
     pub const CID_MPEG_VIDEO_VPX_P_FRAME_QP: u32 = CID_MPEG_BASE + 510;
     pub const CID_MPEG_VIDEO_VPX_PROFILE: u32 = CID_MPEG_BASE + 511;
     pub const CID_MPEG_CX2341X_BASE: u32 = CLASS_MPEG | 0x1000;
-    pub const CID_MPEG_CX2341X_VIDEO_SPATIAL_FILTER_MODE: u32 = CID_MPEG_CX2341X_BASE + 0;
+    pub const CID_MPEG_CX2341X_VIDEO_SPATIAL_FILTER_MODE: u32 = CID_MPEG_CX2341X_BASE;
     pub const MPEG_CX2341X_VIDEO_SPATIAL_FILTER_MODE_MANUAL: u32 = 0;
     pub const MPEG_CX2341X_VIDEO_SPATIAL_FILTER_MODE_AUTO: u32 = 1;
     pub const CID_MPEG_CX2341X_VIDEO_SPATIAL_FILTER: u32 = CID_MPEG_CX2341X_BASE + 1;
@@ -1013,7 +1014,7 @@ pub mod pubconsts {
     pub const CID_MPEG_CX2341X_VIDEO_CHROMA_MEDIAN_FILTER_TOP: u32 = CID_MPEG_CX2341X_BASE + 10;
     pub const CID_MPEG_CX2341X_STREAM_INSERT_NAV_PACKETS: u32 = CID_MPEG_CX2341X_BASE + 11;
     pub const CID_MPEG_MFC51_BASE: u32 = CLASS_MPEG | 0x1100;
-    pub const CID_MPEG_MFC51_VIDEO_DECODER_H264_DISPLAY_DELAY: u32 = CID_MPEG_MFC51_BASE + 0;
+    pub const CID_MPEG_MFC51_VIDEO_DECODER_H264_DISPLAY_DELAY: u32 = CID_MPEG_MFC51_BASE;
     pub const CID_MPEG_MFC51_VIDEO_DECODER_H264_DISPLAY_DELAY_ENABLE: u32 = CID_MPEG_MFC51_BASE + 1;
     pub const CID_MPEG_MFC51_VIDEO_FRAME_SKIP_MODE: u32 = CID_MPEG_MFC51_BASE + 2;
     pub const MPEG_MFC51_VIDEO_FRAME_SKIP_MODE_DISABLED: u32 = 0;
@@ -1095,14 +1096,14 @@ pub mod pubconsts {
     pub const SCENE_MODE_SUNSET: u32 = 12;
     pub const SCENE_MODE_TEXT: u32 = 13;
     pub const CID_3A_LOCK: u32 = CID_CAMERA_CLASS_BASE + 27;
-    pub const LOCK_EXPOSURE: u32 = 1 << 0;
+    pub const LOCK_EXPOSURE: u32 = 1;
     pub const LOCK_WHITE_BALANCE: u32 = 1 << 1;
     pub const LOCK_FOCUS: u32 = 1 << 2;
     pub const CID_AUTO_FOCUS_START: u32 = CID_CAMERA_CLASS_BASE + 28;
     pub const CID_AUTO_FOCUS_STOP: u32 = CID_CAMERA_CLASS_BASE + 29;
     pub const CID_AUTO_FOCUS_STATUS: u32 = CID_CAMERA_CLASS_BASE + 30;
-    pub const AUTO_FOCUS_STATUS_IDLE: u32 = 0 << 0;
-    pub const AUTO_FOCUS_STATUS_BUSY: u32 = 1 << 0;
+    pub const AUTO_FOCUS_STATUS_IDLE: u32 = 0;
+    pub const AUTO_FOCUS_STATUS_BUSY: u32 = 1;
     pub const AUTO_FOCUS_STATUS_REACHED: u32 = 1 << 1;
     pub const AUTO_FOCUS_STATUS_FAILED: u32 = 1 << 2;
     pub const CID_AUTO_FOCUS_RANGE: u32 = CID_CAMERA_CLASS_BASE + 31;
@@ -1162,7 +1163,7 @@ pub mod pubconsts {
     pub const CID_FLASH_TORCH_INTENSITY: u32 = CID_FLASH_CLASS_BASE + 8;
     pub const CID_FLASH_INDICATOR_INTENSITY: u32 = CID_FLASH_CLASS_BASE + 9;
     pub const CID_FLASH_FAULT: u32 = CID_FLASH_CLASS_BASE + 10;
-    pub const FLASH_FAULT_OVER_VOLTAGE: u32 = 1 << 0;
+    pub const FLASH_FAULT_OVER_VOLTAGE: u32 = 1;
     pub const FLASH_FAULT_TIMEOUT: u32 = 1 << 1;
     pub const FLASH_FAULT_OVER_TEMPERATURE: u32 = 1 << 2;
     pub const FLASH_FAULT_SHORT_CIRCUIT: u32 = 1 << 3;
@@ -1185,7 +1186,7 @@ pub mod pubconsts {
     pub const CID_JPEG_RESTART_INTERVAL: u32 = CID_JPEG_CLASS_BASE + 2;
     pub const CID_JPEG_COMPRESSION_QUALITY: u32 = CID_JPEG_CLASS_BASE + 3;
     pub const CID_JPEG_ACTIVE_MARKER: u32 = CID_JPEG_CLASS_BASE + 4;
-    pub const JPEG_ACTIVE_MARKER_APP0: u32 = 1 << 0;
+    pub const JPEG_ACTIVE_MARKER_APP0: u32 = 1;
     pub const JPEG_ACTIVE_MARKER_APP1: u32 = 1 << 1;
     pub const JPEG_ACTIVE_MARKER_COM: u32 = 1 << 16;
     pub const JPEG_ACTIVE_MARKER_DQT: u32 = 1 << 17;

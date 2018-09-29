@@ -146,7 +146,7 @@ impl FormatInfo {
     fn new(fourcc: u32, desc: &[u8], flags: u32) -> FormatInfo {
         FormatInfo {
             format: [
-                (fourcc >> 0 & 0xff) as u8,
+                (fourcc & 0xff) as u8,
                 (fourcc >> 8 & 0xff) as u8,
                 (fourcc >> 16 & 0xff) as u8,
                 (fourcc >> 24 & 0xff) as u8,
@@ -158,7 +158,10 @@ impl FormatInfo {
     }
 
     fn fourcc(fmt: &[u8]) -> u32 {
-        fmt[0] as u32 | (fmt[1] as u32) << 8 | (fmt[2] as u32) << 16 | (fmt[3] as u32) << 24
+        u32::from(fmt[0])
+            | (u32::from(fmt[1])) << 8
+            | (u32::from(fmt[2])) << 16
+            | (u32::from(fmt[3])) << 24
     }
 }
 
@@ -196,7 +199,7 @@ impl fmt::Debug for ResolutionInfo {
                     try!(write!(f, ", {}x{}", res.0, res.1));
                 }
 
-                Ok({})
+                Ok(())
             }
             ResolutionInfo::Stepwise { min, max, step } => write!(
                 f,
@@ -226,7 +229,7 @@ impl fmt::Debug for IntervalInfo {
                     try!(write!(f, ", {}fps", res.1 / res.0));
                 }
 
-                Ok({})
+                Ok(())
             }
             IntervalInfo::Stepwise { min, max, step } => write!(
                 f,
@@ -420,7 +423,7 @@ impl Camera {
         ControlIter {
             camera: self,
             id: class as u32,
-            class: class,
+            class,
         }
     }
 
@@ -494,7 +497,7 @@ impl Camera {
         Ok(Control {
             id: qctrl.id,
             name: buffer_to_string(&qctrl.name),
-            data: data,
+            data,
             flags: qctrl.flags,
         })
     }
@@ -517,7 +520,7 @@ impl Camera {
     fn get_menu_items(&self, id: u32, min: u32, max: u32) -> io::Result<Vec<CtrlMenuItem>> {
         let mut items = vec![];
         let mut qmenu = v4l2::QueryMenu::new(id);
-        for index in min..max + 1 {
+        for index in min..=max {
             qmenu.index = index as u32;
             if try!(v4l2::xioctl_valid(
                 self.fd,
@@ -525,7 +528,7 @@ impl Camera {
                 &mut qmenu
             )) {
                 items.push(CtrlMenuItem {
-                    index: index,
+                    index,
                     name: buffer_to_string(&qmenu.name),
                 });
             }
@@ -536,7 +539,7 @@ impl Camera {
     fn get_int_menu_items(&self, id: u32, min: u32, max: u32) -> io::Result<Vec<CtrlIntMenuItem>> {
         let mut items = vec![];
         let mut qmenu = v4l2::QueryMenu::new(id);
-        for index in min..max + 1 {
+        for index in min..=max {
             qmenu.index = index as u32;
             if try!(v4l2::xioctl_valid(
                 self.fd,
@@ -544,7 +547,7 @@ impl Camera {
                 &mut qmenu
             )) {
                 items.push(CtrlIntMenuItem {
-                    index: index,
+                    index,
                     value: *qmenu.value(),
                 });
             }
@@ -563,7 +566,7 @@ impl Camera {
     }
 
     /// Set value of the control.
-    pub fn set_control<T: Settable>(&self, id: u32, value: T) -> io::Result<()> {
+    pub fn set_control<T: Settable>(&self, id: u32, value: &T) -> io::Result<()> {
         let mut ctrl = v4l2::ExtControl::new(id, 0);
         ctrl.value = value.unify();
         let mut ctrls = v4l2::ExtControls::new(id & v4l2::ID2CLASS, &mut ctrl);
@@ -790,13 +793,13 @@ impl Settable for i64 {
 
 impl Settable for i32 {
     fn unify(&self) -> i64 {
-        *self as i64
+        i64::from(*self)
     }
 }
 
 impl Settable for u32 {
     fn unify(&self) -> i64 {
-        *self as i64
+        i64::from(*self)
     }
 }
 

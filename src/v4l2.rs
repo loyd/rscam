@@ -1,3 +1,5 @@
+#![cfg_attr(feature = "cargo-clippy", allow(unreadable_literal))]
+
 use std::ffi::CString;
 use std::os::unix::io::RawFd;
 use std::ptr::null_mut;

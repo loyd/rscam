@@ -422,8 +422,14 @@ impl QueryExtCtrl {
 pub struct QueryMenu {
     pub id: u32,
     pub index: u32,
-    pub name: [u8; 32],
+    pub data: QueryMenuData,
     reserved: u32,
+}
+
+#[repr(C, packed)]
+pub union QueryMenuData {
+    name: [u8; 32],
+    value: i64,
 }
 
 impl QueryMenu {
@@ -432,9 +438,15 @@ impl QueryMenu {
         menu.id = id;
         menu
     }
+}
 
-    pub fn value(&mut self) -> &mut i64 {
-        unsafe { mem::transmute(self.name.as_mut_ptr()) }
+impl QueryMenuData {
+    pub fn name(&self) -> &[u8] {
+        unsafe { &self.name[..] }
+    }
+
+    pub fn value(&self) -> i64 {
+        unsafe { self.value }
     }
 }
 

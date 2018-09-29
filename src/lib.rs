@@ -160,7 +160,7 @@ impl FormatInfo {
         }
     }
 
-    fn fourcc(fmt: &[u8; 4]) -> u32 {
+    fn fourcc(fmt: [u8; 4]) -> u32 {
         u32::from(fmt[0])
             | (u32::from(fmt[1])) << 8
             | (u32::from(fmt[2])) << 16
@@ -315,7 +315,7 @@ impl Camera {
     }
 
     /// Get detailed info about the available resolutions.
-    pub fn resolutions(&self, format: &[u8; 4]) -> Result<ResolutionInfo> {
+    pub fn resolutions(&self, format: [u8; 4]) -> Result<ResolutionInfo> {
         let fourcc = FormatInfo::fourcc(format);
         let mut size = v4l2::Frmsizeenum::new(fourcc);
 
@@ -350,7 +350,7 @@ impl Camera {
     }
 
     /// Get detailed info about the available intervals.
-    pub fn intervals(&self, format: &[u8; 4], resolution: (u32, u32)) -> Result<IntervalInfo> {
+    pub fn intervals(&self, format: [u8; 4], resolution: (u32, u32)) -> Result<IntervalInfo> {
         let fourcc = FormatInfo::fourcc(format);
         let mut ival = v4l2::Frmivalenum::new(fourcc, resolution);
 
@@ -551,7 +551,7 @@ impl Camera {
     pub fn start(&mut self, config: &Config) -> Result<()> {
         assert_eq!(self.state, State::Idle);
 
-        self.tune_format(config.resolution, config.format, config.field)?;
+        self.tune_format(config.resolution, *config.format, config.field)?;
         self.tune_stream(config.interval)?;
         self.alloc_buffers(config.nbuffers)?;
 
@@ -611,7 +611,7 @@ impl Camera {
         Ok(())
     }
 
-    fn tune_format(&self, resolution: (u32, u32), format: &[u8; 4], field: u32) -> Result<()> {
+    fn tune_format(&self, resolution: (u32, u32), format: [u8; 4], field: u32) -> Result<()> {
         let fourcc = FormatInfo::fourcc(format);
         let mut fmt = v4l2::Format::new(resolution, fourcc, field as u32);
 

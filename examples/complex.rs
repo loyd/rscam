@@ -9,7 +9,7 @@ fn main() {
     for wformat in camera.formats() {
         let format = wformat.unwrap();
         println!("{:?}", format);
-        println!("  {:?}", camera.resolutions(&format.format).unwrap());
+        println!("  {:?}", camera.resolutions(format.format).unwrap());
     }
 
     camera

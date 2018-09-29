@@ -1,10 +1,12 @@
 rscam
 =====
 
-Rust wrapper for v4l2.
+[![Build status](https://travis-ci.org/loyd/rscam.svg)](https://travis-ci.org/loyd/rscam)
+[![Crate info](https://img.shields.io/crates/v/rscam.svg)](https://crates.io/crates/rscam)
+[![Documentation](https://docs.rs/rscam/badge.svg)](https://docs.rs/rscam)
 
-* [Documentation](http://loyd.github.io/rscam)
-* [Crate info](https://crates.io/crates/rscam)
+
+Rust wrapper for v4l2.
 
 ```rust
 let mut camera = rscam::new("/dev/video0").unwrap();

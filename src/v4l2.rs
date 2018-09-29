@@ -50,11 +50,11 @@ mod ll {
 
 macro_rules! check_io(
     ($cond:expr) =>
-        (try!(if $cond { Ok(()) } else { Err(io::Error::last_os_error()) }))
+        (if $cond { Ok(()) } else { Err(io::Error::last_os_error()) }?)
 );
 
 pub fn open(file: &str) -> io::Result<RawFd> {
-    let c_str = try!(CString::new(file));
+    let c_str = CString::new(file)?;
     let fd = unsafe { ll::open(c_str.as_ptr(), O_RDWR, 0) };
     check_io!(fd != -1);
     Ok(fd)

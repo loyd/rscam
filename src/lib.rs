@@ -867,7 +867,8 @@ fn buffer_to_string(buf: &[u8]) -> String {
     String::from_utf8_lossy(match buf.iter().position(|&c| c == 0) {
         Some(x) => &buf[..x],
         None => buf,
-    }).into_owned()
+    })
+    .into_owned()
 }
 
 /// Alias for `Camera::new()`.

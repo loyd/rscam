@@ -9,7 +9,8 @@ fn main() {
             resolution: (1280, 720),
             format: b"YUYV",
             ..Default::default()
-        }).unwrap();
+        })
+        .unwrap();
 
     for i in 1.. {
         let frame = camera.capture().unwrap();

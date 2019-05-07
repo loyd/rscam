@@ -18,7 +18,8 @@ fn main() {
             resolution: (1280, 720),
             format: b"MJPG",
             ..Default::default()
-        }).unwrap();
+        })
+        .unwrap();
 
     for i in 0..10 {
         let frame = camera.capture().unwrap();

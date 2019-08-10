@@ -574,40 +574,40 @@ pub mod pubconsts {
 
     // Control classses.
     /// User controls.
-    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/control.html).
+    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/uapi/v4l/control.html).
     pub const CLASS_USER: u32 = 0x00980000;
     /// MPEG compression controls.
-    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#mpeg-controls).
+    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/uapi/v4l/extended-controls.html#mpeg-controls).
     pub const CLASS_MPEG: u32 = 0x00990000;
     /// Camera controls.
-    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#camera-controls).
+    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/uapi/v4l/extended-controls.html#camera-controls).
     pub const CLASS_CAMERA: u32 = 0x009a0000;
     /// FM Transmitter controls.
-    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#fm-tx-controls).
+    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/uapi/v4l/extended-controls.html#fm-tx-controls).
     pub const CLASS_FM_TX: u32 = 0x009b0000;
     /// Flash device controls.
-    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#flash-controls).
+    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/uapi/v4l/extended-controls.html#flash-controls).
     pub const CLASS_FLASH: u32 = 0x009c0000;
     /// JPEG compression controls.
-    /// [details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#jpeg-controls).
+    /// [details](http://linuxtv.org/downloads/v4l-dvb-apis/uapi/v4l/extended-controls.html#jpeg-controls).
     pub const CLASS_JPEG: u32 = 0x009d0000;
     /// low-level controls of image source.
-    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#image-source-controls).
+    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/uapi/v4l/extended-controls.html#image-source-controls).
     pub const CLASS_IMAGE_SOURCE: u32 = 0x009e0000;
     /// Image processing controls.
-    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#image-process-controls).
+    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/uapi/v4l/extended-controls.html#image-process-controls).
     pub const CLASS_IMAGE_PROC: u32 = 0x009f0000;
     /// Digital Video controls.
-    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#dv-controls).
+    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/uapi/v4l/extended-controls.html#dv-controls).
     pub const CLASS_DV: u32 = 0x00a00000;
     /// FM Receiver controls.
-    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#fm-rx-controls).
+    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/uapi/v4l/extended-controls.html#fm-rx-controls).
     pub const CLASS_FM_RX: u32 = 0x00a10000;
     /// RF tuner controls.
-    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#rf-tuner-controls).
+    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/uapi/v4l/extended-controls.html#rf-tuner-controls).
     pub const CLASS_RF_TUNER: u32 = 0x00a20000;
     /// Motion or object detection controls.
-    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/extended-controls.html#detect-controls).
+    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/uapi/v4l/extended-controls.html#detect-controls).
     pub const CLASS_DETECT: u32 = 0x00a30000;
 
     pub const CID_BASE: u32 = CLASS_USER | 0x900;

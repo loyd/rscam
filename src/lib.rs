@@ -799,7 +799,7 @@ impl Settable for String {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Control {
     pub id: u32,
     pub name: String,
@@ -808,7 +808,7 @@ pub struct Control {
     pub flags: u32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum CtrlData {
     Integer {
         value: i32,
@@ -854,13 +854,13 @@ pub enum CtrlData {
     Unknown,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CtrlMenuItem {
     pub index: u32,
     pub name: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CtrlIntMenuItem {
     pub index: u32,
     pub value: i64,

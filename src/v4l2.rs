@@ -1083,6 +1083,7 @@ pub mod pubconsts {
     pub const WHITE_BALANCE_FLASH: u32 = 7;
     pub const WHITE_BALANCE_CLOUDY: u32 = 8;
     pub const WHITE_BALANCE_SHADE: u32 = 9;
+    pub const WHITE_BALANCE_GREYWORLD: u32 = 10;
     pub const CID_WIDE_DYNAMIC_RANGE: u32 = CID_CAMERA_CLASS_BASE + 21;
     pub const CID_IMAGE_STABILIZATION: u32 = CID_CAMERA_CLASS_BASE + 22;
     pub const CID_ISO_SENSITIVITY: u32 = CID_CAMERA_CLASS_BASE + 23;

@@ -14,3 +14,4 @@ libc = "0.2"
 
 [features]
 no_wrapper = []
+static = []

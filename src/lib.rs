@@ -45,6 +45,9 @@ mod v4l2;
 
 pub type Result<T> = result::Result<T, Error>;
 
+#[cfg(feature = "serde")]
+extern crate serde;
+
 #[macro_use]
 extern crate derivative;
 
@@ -62,7 +65,8 @@ pub enum Error {
     BadField,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Config<'a> {
     /// The mix of numerator and denominator. v4l2 uses frame intervals instead of frame rates.
     /// Default is `(1, 10)`.
@@ -94,6 +98,7 @@ impl<'a> Default for Config<'a> {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub struct FormatInfo {
     /// FourCC of format (e.g. `b"H264"`).
     pub format: [u8; 4],
@@ -143,6 +148,7 @@ impl fmt::Debug for FormatInfo {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub enum ResolutionInfo {
     Discretes(Vec<(u32, u32)>),
     Stepwise {
@@ -173,6 +179,7 @@ impl fmt::Debug for ResolutionInfo {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub enum IntervalInfo {
     Discretes(Vec<(u32, u32)>),
     Stepwise {
@@ -242,6 +249,7 @@ impl Drop for Frame {
 }
 
 #[derive(Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 enum State {
     Idle,
     Streaming,
@@ -249,11 +257,13 @@ enum State {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Camera {
     fd: RawFd,
     state: State,
     resolution: (u32, u32),
     format: [u8; 4],
+    #[cfg_attr(feature = "serde", serde(skip_serializing))]
     buffers: Vec<Arc<MappedRegion>>,
 }
 
@@ -661,6 +671,7 @@ impl Drop for Camera {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct FormatIter<'a> {
     camera: &'a Camera,
     index: u32,
@@ -752,6 +763,7 @@ impl Settable for String {
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub struct Control {
     pub id: u32,
     pub name: String,
@@ -761,6 +773,7 @@ pub struct Control {
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub enum CtrlData {
     Integer {
         value: i32,
@@ -807,12 +820,14 @@ pub enum CtrlData {
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub struct CtrlMenuItem {
     pub index: u32,
     pub name: String,
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub struct CtrlIntMenuItem {
     pub index: u32,
     pub value: i64,

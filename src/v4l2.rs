@@ -140,7 +140,7 @@ pub struct Format {
     #[cfg(target_pointer_width = "64")]
     padding: u32,
     pub fmt: PixFormat,
-    #[derivative(Debug="ignore")]
+    #[derivative(Debug = "ignore")]
     space: [u8; 156],
 }
 
@@ -166,6 +166,7 @@ impl Format {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C)]
 pub struct PixFormat {
     pub width: u32,
@@ -193,6 +194,7 @@ impl PixFormat {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C)]
 pub struct RequestBuffers {
     pub count: u32,
@@ -221,7 +223,7 @@ pub struct Buffer {
     pub bytesused: u32,
     pub flags: u32,
     pub field: u32,
-    #[derivative(Debug="ignore")]
+    #[derivative(Debug = "ignore")]
     pub timestamp: Timeval,
     pub timecode: TimeCode,
     pub sequence: u32,
@@ -242,6 +244,7 @@ impl Buffer {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C)]
 pub struct TimeCode {
     pub ttype: u32,
@@ -254,6 +257,7 @@ pub struct TimeCode {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C)]
 pub struct FmtDesc {
     pub index: u32,
@@ -278,7 +282,7 @@ impl FmtDesc {
 pub struct StreamParm {
     pub ptype: u32,
     pub parm: CaptureParm,
-    #[derivative(Debug="ignore")]
+    #[derivative(Debug = "ignore")]
     space: [u8; 160],
 }
 
@@ -293,6 +297,7 @@ impl StreamParm {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C)]
 pub struct CaptureParm {
     pub capability: u32,
@@ -304,6 +309,7 @@ pub struct CaptureParm {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C)]
 pub struct Fract {
     pub numerator: u32,
@@ -311,6 +317,7 @@ pub struct Fract {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C)]
 pub struct Frmsizeenum {
     pub index: u32,
@@ -337,6 +344,7 @@ impl Frmsizeenum {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C)]
 pub struct FrmsizeDiscrete {
     pub width: u32,
@@ -344,6 +352,7 @@ pub struct FrmsizeDiscrete {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C)]
 pub struct FrmsizeStepwise {
     pub min_width: u32,
@@ -355,6 +364,7 @@ pub struct FrmsizeStepwise {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C)]
 pub struct Frmivalenum {
     pub index: u32,
@@ -385,6 +395,7 @@ impl Frmivalenum {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C)]
 pub struct FrmivalStepwise {
     pub min: Fract,
@@ -393,6 +404,7 @@ pub struct FrmivalStepwise {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C)]
 pub struct QueryCtrl {
     pub id: u32,
@@ -415,6 +427,7 @@ impl QueryCtrl {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C)]
 pub struct QueryExtCtrl {
     pub id: u32,
@@ -442,11 +455,15 @@ impl QueryExtCtrl {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Derivative, Debug, Copy, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C, packed)]
 pub struct QueryMenu {
     pub id: u32,
     pub index: u32,
+    //#[derivative(Debug="ignore")]
+    #[serde(skip_serializing)]
+    #[serde(skip_deserializing)]
     pub data: QueryMenuData,
     reserved: u32,
 }
@@ -456,6 +473,12 @@ pub struct QueryMenu {
 pub union QueryMenuData {
     name: [u8; 32],
     value: i64,
+}
+
+impl Default for QueryMenuData {
+    fn default() -> Self {
+        QueryMenuData { value: 0 }
+    }
 }
 
 impl fmt::Debug for QueryMenuData {
@@ -483,6 +506,7 @@ impl QueryMenuData {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C)]
 pub struct Control {
     pub id: u32,
@@ -496,6 +520,7 @@ impl Control {
 }
 
 #[derive(Debug, Copy, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C, packed)]
 pub struct ExtControl {
     pub id: u32,
@@ -516,6 +541,7 @@ impl ExtControl {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 #[repr(C)]
 pub struct ExtControls<'a> {
     pub ctrl_class: u32,

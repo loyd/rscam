@@ -45,6 +45,9 @@ mod v4l2;
 
 pub type Result<T> = result::Result<T, Error>;
 
+#[macro_use]
+extern crate derivative;
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("I/O error: {0}")]
@@ -59,6 +62,7 @@ pub enum Error {
     BadField,
 }
 
+#[derive(Debug)]
 pub struct Config<'a> {
     /// The mix of numerator and denominator. v4l2 uses frame intervals instead of frame rates.
     /// Default is `(1, 10)`.
@@ -201,6 +205,7 @@ impl fmt::Debug for IntervalInfo {
     }
 }
 
+#[derive(Debug)]
 pub struct Frame {
     /// Width and height of the frame.
     pub resolution: (u32, u32),
@@ -243,6 +248,7 @@ enum State {
     Aborted,
 }
 
+#[derive(Debug)]
 pub struct Camera {
     fd: RawFd,
     state: State,
@@ -654,6 +660,7 @@ impl Drop for Camera {
     }
 }
 
+#[derive(Debug)]
 pub struct FormatIter<'a> {
     camera: &'a Camera,
     index: u32,
@@ -681,6 +688,7 @@ impl<'a> Iterator for FormatIter<'a> {
     }
 }
 
+#[derive(Debug)]
 pub struct ControlIter<'a> {
     camera: &'a Camera,
     id: u32,

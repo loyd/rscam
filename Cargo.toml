@@ -8,6 +8,7 @@ repository = "https://github.com/loyd/rscam"
 documentation = "https://docs.rs/rscam"
 license = "MIT OR Apache-2.0"
 readme = "README.md"
+edition = "2018"
 
 [dependencies]
 libc = "0.2"

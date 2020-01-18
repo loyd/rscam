@@ -27,10 +27,6 @@
 #[cfg(not(any(target_os = "linux", target_os = "freebsd")))]
 compile_error!("rscam (v4l2) is for linux/freebsd only");
 
-extern crate libc;
-
-mod v4l2;
-
 use std::convert::From;
 use std::error;
 use std::fmt;
@@ -42,10 +38,11 @@ use std::slice;
 use std::str;
 use std::sync::Arc;
 
-use v4l2::MappedRegion;
+pub use self::consts::*;
+pub use self::v4l2::pubconsts as consts;
+use self::v4l2::MappedRegion;
 
-pub use consts::*;
-pub use v4l2::pubconsts as consts;
+mod v4l2;
 
 pub type Result<T> = result::Result<T, Error>;
 
@@ -64,7 +61,7 @@ pub enum Error {
 }
 
 impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Error::Io(ref err) => write!(f, "I/O error: {}", err),
             Error::BadInterval => write!(f, "Invalid or unsupported frame interval"),
@@ -88,7 +85,7 @@ impl error::Error for Error {
         }
     }
 
-    fn cause(&self) -> Option<&error::Error> {
+    fn cause(&self) -> Option<&dyn error::Error> {
         if let Error::Io(ref err) = *self {
             Some(err)
         } else {
@@ -169,7 +166,7 @@ impl FormatInfo {
 }
 
 impl fmt::Debug for FormatInfo {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let format = str::from_utf8(self.format.as_ref()).unwrap();
 
         let flags = match (self.compressed, self.emulated) {
@@ -193,7 +190,7 @@ pub enum ResolutionInfo {
 }
 
 impl fmt::Debug for ResolutionInfo {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             ResolutionInfo::Discretes(ref d) => {
                 write!(f, "Discretes: {}x{}", d[0].0, d[0].1)?;
@@ -223,7 +220,7 @@ pub enum IntervalInfo {
 }
 
 impl fmt::Debug for IntervalInfo {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             IntervalInfo::Discretes(ref d) => {
                 write!(f, "Discretes: {}fps", d[0].1 / d[0].0)?;
@@ -307,7 +304,7 @@ impl Camera {
     }
 
     /// Get detailed info about the available formats.
-    pub fn formats(&self) -> FormatIter {
+    pub fn formats(&self) -> FormatIter<'_> {
         FormatIter {
             camera: self,
             index: 0,
@@ -397,7 +394,7 @@ impl Camera {
     }
 
     /// Get info about all controls.
-    pub fn controls(&self) -> ControlIter {
+    pub fn controls(&self) -> ControlIter<'_> {
         ControlIter {
             camera: self,
             id: 0,
@@ -406,7 +403,7 @@ impl Camera {
     }
 
     /// Get info about available controls by class (see `CLASS_*` constants).
-    pub fn controls_by_class(&self, class: u32) -> ControlIter {
+    pub fn controls_by_class(&self, class: u32) -> ControlIter<'_> {
         ControlIter {
             camera: self,
             id: class as u32,
@@ -556,7 +553,7 @@ impl Camera {
     ///
     /// # Panics
     /// If recalled or called after `stop()`.
-    pub fn start(&mut self, config: &Config) -> Result<()> {
+    pub fn start(&mut self, config: &Config<'_>) -> Result<()> {
         assert_eq!(self.state, State::Idle);
 
         self.tune_format(config.resolution, config.format, config.field)?;

@@ -491,7 +491,7 @@ pub struct ExtControls<'a> {
 }
 
 impl<'a> ExtControls<'a> {
-    pub fn new(class: u32, ctrl: &mut ExtControl) -> ExtControls {
+    pub fn new(class: u32, ctrl: &mut ExtControl) -> ExtControls<'_> {
         ExtControls {
             ctrl_class: class,
             count: 1,
@@ -1343,8 +1343,8 @@ fn test_sizes() {
     assert_eq!(mem::size_of::<ExtControl>(), 20);
 
     if cfg!(target_pointer_width = "64") {
-        assert_eq!(mem::size_of::<ExtControls>(), 32);
+        assert_eq!(mem::size_of::<ExtControls<'_>>(), 32);
     } else {
-        assert_eq!(mem::size_of::<ExtControls>(), 24);
+        assert_eq!(mem::size_of::<ExtControls<'_>>(), 24);
     }
 }

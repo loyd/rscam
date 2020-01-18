@@ -16,3 +16,4 @@ thiserror = "1.0.9"
 
 [features]
 no_wrapper = []
+static = []

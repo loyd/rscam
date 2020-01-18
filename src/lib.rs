@@ -68,7 +68,7 @@ pub struct Config<'a> {
     pub resolution: (u32, u32),
     /// FourCC of format (e.g. `b"RGB3"`). Note that case matters.
     /// Default is `b"YUYV"`.
-    pub format: &'a [u8],
+    pub format: &'a [u8; 4],
     /// Storage method of interlaced video. See `FIELD_*` constants.
     /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/uapi/v4l/field-order.html#v4l2-field).
     /// Default is `FIELD_NONE` (progressive).
@@ -116,7 +116,7 @@ impl FormatInfo {
         }
     }
 
-    fn fourcc(fmt: &[u8]) -> u32 {
+    fn fourcc(fmt: [u8; 4]) -> u32 {
         u32::from(fmt[0])
             | (u32::from(fmt[1])) << 8
             | (u32::from(fmt[2])) << 16
@@ -271,11 +271,7 @@ impl Camera {
     }
 
     /// Get detailed info about the available resolutions.
-    pub fn resolutions(&self, format: &[u8]) -> Result<ResolutionInfo> {
-        if format.len() != 4 {
-            return Err(Error::BadFormat);
-        }
-
+    pub fn resolutions(&self, format: [u8; 4]) -> Result<ResolutionInfo> {
         let fourcc = FormatInfo::fourcc(format);
         let mut size = v4l2::Frmsizeenum::new(fourcc);
 
@@ -310,11 +306,7 @@ impl Camera {
     }
 
     /// Get detailed info about the available intervals.
-    pub fn intervals(&self, format: &[u8], resolution: (u32, u32)) -> Result<IntervalInfo> {
-        if format.len() != 4 {
-            return Err(Error::BadFormat);
-        }
-
+    pub fn intervals(&self, format: [u8; 4], resolution: (u32, u32)) -> Result<IntervalInfo> {
         let fourcc = FormatInfo::fourcc(format);
         let mut ival = v4l2::Frmivalenum::new(fourcc, resolution);
 
@@ -515,7 +507,7 @@ impl Camera {
     pub fn start(&mut self, config: &Config<'_>) -> Result<()> {
         assert_eq!(self.state, State::Idle);
 
-        self.tune_format(config.resolution, config.format, config.field)?;
+        self.tune_format(config.resolution, *config.format, config.field)?;
         self.tune_stream(config.interval)?;
         self.alloc_buffers(config.nbuffers)?;
 
@@ -575,11 +567,7 @@ impl Camera {
         Ok(())
     }
 
-    fn tune_format(&self, resolution: (u32, u32), format: &[u8], field: u32) -> Result<()> {
-        if format.len() != 4 {
-            return Err(Error::BadFormat);
-        }
-
+    fn tune_format(&self, resolution: (u32, u32), format: [u8; 4], field: u32) -> Result<()> {
         let fourcc = FormatInfo::fourcc(format);
         let mut fmt = v4l2::Format::new(resolution, fourcc, field as u32);
 

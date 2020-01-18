@@ -1,5 +1,3 @@
-extern crate rscam;
-
 use std::fs;
 use std::io::Write;
 

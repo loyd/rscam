@@ -1,5 +1,3 @@
-extern crate rscam;
-
 use rscam::FLAG_DISABLED;
 use rscam::{Camera, CtrlData};
 

@@ -1,5 +1,3 @@
-extern crate rscam;
-
 use rscam::{Camera, ResolutionInfo};
 
 fn main() {

@@ -1,5 +1,3 @@
-extern crate rscam;
-
 use rscam::CID_BRIGHTNESS;
 use rscam::{Camera, Control, CtrlData};
 

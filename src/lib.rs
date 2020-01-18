@@ -70,7 +70,7 @@ pub struct Config<'a> {
     /// Default is `b"YUYV"`.
     pub format: &'a [u8],
     /// Storage method of interlaced video. See `FIELD_*` constants.
-    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/field-order.html#v4l2-field).
+    /// [Details](http://linuxtv.org/downloads/v4l-dvb-apis/uapi/v4l/field-order.html#v4l2-field).
     /// Default is `FIELD_NONE` (progressive).
     pub field: u32,
     /// Number of buffers in the queue of camera.

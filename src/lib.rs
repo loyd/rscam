@@ -28,7 +28,6 @@
 compile_error!("rscam (v4l2) is for linux/freebsd only");
 
 use std::convert::From;
-use std::error;
 use std::fmt;
 use std::io;
 use std::ops::Deref;
@@ -46,58 +45,18 @@ mod v4l2;
 
 pub type Result<T> = result::Result<T, Error>;
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum Error {
-    /// I/O error when using the camera.
-    Io(io::Error),
-    /// Unsupported frame interval.
+    #[error("I/O error: {0}")]
+    Io(#[from] io::Error),
+    #[error("invalid or unsupported frame interval")]
     BadInterval,
-    /// Unsupported resolution (width and/or height).
+    #[error("invalid or unsupported resolution (width and/or height)")]
     BadResolution,
-    /// Unsupported format of pixels.
+    #[error("invalid or unsupported format of pixels")]
     BadFormat,
-    /// Unsupported field.
+    #[error("invalid or unsupported field")]
     BadField,
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self {
-            Error::Io(ref err) => write!(f, "I/O error: {}", err),
-            Error::BadInterval => write!(f, "Invalid or unsupported frame interval"),
-            Error::BadResolution => {
-                write!(f, "Invalid or unsupported resolution (width and/or height)")
-            }
-            Error::BadFormat => write!(f, "Invalid or unsupported format of pixels"),
-            Error::BadField => write!(f, "Invalid or unsupported field"),
-        }
-    }
-}
-
-impl error::Error for Error {
-    fn description(&self) -> &str {
-        match *self {
-            Error::Io(ref err) => err.description(),
-            Error::BadInterval => "bad interval",
-            Error::BadResolution => "bad resolution",
-            Error::BadFormat => "bad format",
-            Error::BadField => "bad field",
-        }
-    }
-
-    fn cause(&self) -> Option<&dyn error::Error> {
-        if let Error::Io(ref err) = *self {
-            Some(err)
-        } else {
-            None
-        }
-    }
-}
-
-impl From<io::Error> for Error {
-    fn from(err: io::Error) -> Error {
-        Error::Io(err)
-    }
 }
 
 pub struct Config<'a> {

@@ -622,7 +622,7 @@ impl Camera {
 
         v4l2::xioctl(self.fd, v4l2::VIDIOC_REQBUFS, &mut req)?;
 
-        for i in 0..nbuffers {
+        for i in 0..req.count {
             let mut buf = v4l2::Buffer::new();
             buf.index = i;
             v4l2::xioctl(self.fd, v4l2::VIDIOC_QUERYBUF, &mut buf)?;

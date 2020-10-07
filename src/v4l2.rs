@@ -406,6 +406,26 @@ pub struct FrmivalStepwise {
 #[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C)]
+pub struct Capability {
+    pub driver: [u8; 16],
+    pub card: [u8; 32],
+    pub bus_info: [u8; 32],
+    pub version: u32,
+    pub capabilities: u32,
+    pub device_caps: u32,
+    pub reserved: [u32; 3],
+}
+
+impl Capability {
+    pub fn new() -> Self {
+        let capability: Self = unsafe { mem::zeroed() };
+        capability
+    }
+}
+
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[repr(C)]
 pub struct QueryCtrl {
     pub id: u32,
     pub qtype: u32,

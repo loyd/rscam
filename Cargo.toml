@@ -11,8 +11,11 @@ readme = "README.md"
 edition = "2018"
 
 [dependencies]
+derivative = "1.0.3"
 libc = "0.2"
 thiserror = "1.0.9"
+serde = { version = "1.0.104", features = ["derive"], optional = true }
 
 [features]
 no_wrapper = []
+default = ["serde"]

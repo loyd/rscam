@@ -267,6 +267,32 @@ pub struct Camera {
     buffers: Vec<Arc<MappedRegion>>,
 }
 
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct Capability {
+    driver: String,
+    card: String,
+    bus_info: String,
+    version: u32,
+    capabilities: u32,
+    device_caps: u32,
+}
+
+fn cstring_to_string(array: &[u8]) -> Result<&str> {
+    let position = array.iter().position(|&byte| byte == 0).map_or(0, |position| position);
+    match std::str::from_utf8(&array[..position]) {
+        Ok(content) => Ok(content),
+        Err(error) => {
+            let (valid, _) = array.split_at(error.valid_up_to());
+            if !valid.is_empty() {
+                return Ok(std::str::from_utf8(valid).unwrap());
+            }
+
+            return Err(Error::BadFormat);
+        }
+    }
+}
+
 impl Camera {
     pub fn new(device: &str) -> io::Result<Camera> {
         Ok(Camera {
@@ -276,6 +302,21 @@ impl Camera {
             format: [0; 4],
             buffers: vec![],
         })
+    }
+
+    pub fn capability(&self) -> Result<Capability> {
+        let mut capability = v4l2::Capability::new();
+        v4l2::xioctl(self.fd, v4l2::VIDIOC_QUERYCAP, &mut capability).unwrap();
+        Ok(
+            Capability {
+                driver: cstring_to_string(&capability.driver)?.to_owned(),
+                card: cstring_to_string(&capability.card)?.to_owned(),
+                bus_info: cstring_to_string(&capability.bus_info)?.to_owned(),
+                version: capability.version,
+                capabilities: capability.capabilities,
+                device_caps: capability.device_caps,
+            }
+        )
     }
 
     /// Get detailed info about the available formats.

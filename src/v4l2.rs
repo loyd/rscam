@@ -1352,6 +1352,7 @@ pub mod pubconsts {
 }
 
 // IOCTL codes.
+pub const VIDIOC_QUERYCAP: usize = 2154321408;
 pub const VIDIOC_ENUM_FMT: usize = 3225441794;
 pub const VIDIOC_ENUM_FRAMEINTERVALS: usize = 3224655435;
 pub const VIDIOC_ENUM_FRAMESIZES: usize = 3224131146;

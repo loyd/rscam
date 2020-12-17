@@ -20,7 +20,7 @@ mod ll {
     pub use self::v4l2_munmap as munmap;
     pub use self::v4l2_open as open;
 
-    pub fn mmap(
+    pub unsafe fn mmap(
         start: *mut c_void,
         length: size_t,
         prot: c_int,
@@ -29,7 +29,7 @@ mod ll {
         offset: off_t,
     ) -> *mut c_void {
         // Note the subtle function signature mismatch between mmap and v4l2_mmap.
-        unsafe { v4l2_mmap(start, length, prot, flags, fd, offset as i64) }
+        v4l2_mmap(start, length, prot, flags, fd, offset as i64)
     }
 
     #[link(name = "v4l2")]
@@ -56,7 +56,7 @@ mod ll {
 
     pub use libc::{close, munmap, open};
 
-    pub fn mmap(
+    pub unsafe fn mmap(
         start: *mut c_void,
         length: size_t,
         prot: c_int,
@@ -64,8 +64,7 @@ mod ll {
         fd: RawFd,
         offset: off_t,
     ) -> *mut c_void {
-        // Wrap away unsafety to match the other mmap wrapper function
-        unsafe { libc::mmap(start, length, prot, flags, fd, offset) }
+        libc::mmap(start, length, prot, flags, fd, offset)
     }
 
     extern "C" {
@@ -135,14 +134,16 @@ impl Drop for MappedRegion {
 }
 
 pub fn mmap(length: usize, fd: RawFd, offset: usize) -> io::Result<MappedRegion> {
-    let ptr = ll::mmap(
-        null_mut(),
-        length as size_t,
-        PROT_READ | PROT_WRITE,
-        MAP_SHARED,
-        fd,
-        offset as off_t,
-    );
+    let ptr = unsafe {
+        ll::mmap(
+            null_mut(),
+            length as size_t,
+            PROT_READ | PROT_WRITE,
+            MAP_SHARED,
+            fd,
+            offset as off_t,
+        )
+    };
 
     check_io!(ptr as usize != usize::MAX);
     Ok(MappedRegion {

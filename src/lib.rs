@@ -190,13 +190,22 @@ impl fmt::Debug for IntervalInfo {
 
                 Ok(())
             }
-            IntervalInfo::Stepwise { min, max, step } => write!(
-                f,
-                "Stepwise from {}fps to {}fps by {}fps",
-                max.1 / max.0,
-                min.1 / min.0,
-                step.1 / step.0
-            ),
+            IntervalInfo::Stepwise { min, max, step }
+                if min.0 != 0 && max.0 != 0 && step.0 != 0 =>
+            {
+                write!(
+                    f,
+                    "Stepwise from {}fps to {}fps by {}fps",
+                    max.1 / max.0,
+                    min.1 / min.0,
+                    step.1 / step.0
+                )
+            }
+            IntervalInfo::Stepwise {
+                min: _,
+                max: _,
+                step: _,
+            } => write!(f, "Invalid stepwise interval info with 0 denominators"),
         }
     }
 }

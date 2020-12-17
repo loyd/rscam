@@ -17,9 +17,20 @@ mod ll {
 
     pub use self::v4l2_close as close;
     pub use self::v4l2_ioctl as ioctl;
-    pub use self::v4l2_mmap as mmap;
     pub use self::v4l2_munmap as munmap;
     pub use self::v4l2_open as open;
+
+    pub fn mmap(
+        start: *mut c_void,
+        length: size_t,
+        prot: c_int,
+        flags: c_int,
+        fd: RawFd,
+        offset: off_t,
+    ) -> *mut c_void {
+        // Note the subtle function signature mismatch between mmap and v4l2_mmap.
+        unsafe { v4l2_mmap(start, length, prot, flags, fd, offset as i64) }
+    }
 
     #[link(name = "v4l2")]
     extern "C" {
@@ -32,7 +43,7 @@ mod ll {
             prot: c_int,
             flags: c_int,
             fd: RawFd,
-            offset: off_t,
+            offset: i64,
         ) -> *mut c_void;
         pub fn v4l2_munmap(start: *mut c_void, length: size_t) -> c_int;
     }
@@ -40,10 +51,22 @@ mod ll {
 
 #[cfg(feature = "no_wrapper")]
 mod ll {
-    use libc::{c_int, c_ulong, c_void};
+    use libc::{c_int, c_ulong, c_void, off_t, size_t};
     use std::os::unix::io::RawFd;
 
-    pub use libc::{close, mmap, munmap, open};
+    pub use libc::{close, munmap, open};
+
+    pub fn mmap(
+        start: *mut c_void,
+        length: size_t,
+        prot: c_int,
+        flags: c_int,
+        fd: RawFd,
+        offset: off_t,
+    ) -> *mut c_void {
+        // Wrap away unsafety to match the other mmap wrapper function
+        unsafe { libc::mmap(start, length, prot, flags, fd, offset) }
+    }
 
     extern "C" {
         pub fn ioctl(fd: RawFd, request: c_ulong, argp: *mut c_void) -> c_int;
@@ -112,16 +135,14 @@ impl Drop for MappedRegion {
 }
 
 pub fn mmap(length: usize, fd: RawFd, offset: usize) -> io::Result<MappedRegion> {
-    let ptr = unsafe {
-        ll::mmap(
-            null_mut(),
-            length as size_t,
-            PROT_READ | PROT_WRITE,
-            MAP_SHARED,
-            fd,
-            offset as off_t,
-        )
-    };
+    let ptr = ll::mmap(
+        null_mut(),
+        length as size_t,
+        PROT_READ | PROT_WRITE,
+        MAP_SHARED,
+        fd,
+        offset as off_t,
+    );
 
     check_io!(ptr as usize != usize::MAX);
     Ok(MappedRegion {

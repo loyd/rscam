@@ -37,6 +37,9 @@ use std::slice;
 use std::str;
 use std::sync::Arc;
 
+#[cfg(feature = "tokio_async")]
+use tokio::io::unix::AsyncFd;
+
 pub use self::consts::*;
 pub use self::v4l2::pubconsts as consts;
 use self::v4l2::MappedRegion;
@@ -245,6 +248,8 @@ enum State {
 
 pub struct Camera {
     fd: RawFd,
+    #[cfg(feature = "tokio_async")]
+    async_fd: AsyncFd<RawFd>,
     state: State,
     resolution: (u32, u32),
     format: [u8; 4],
@@ -253,8 +258,14 @@ pub struct Camera {
 
 impl Camera {
     pub fn new(device: &str) -> io::Result<Camera> {
+        #[cfg(feature = "tokio_async")]
+        let fd = v4l2::open(device, false)?;
+        #[cfg(not(feature = "tokio_async"))]
+        let fd = v4l2::open(device, true)?;
         Ok(Camera {
-            fd: v4l2::open(device)?,
+            fd,
+            #[cfg(feature = "tokio_async")]
+            async_fd: AsyncFd::new(fd)?,
             state: State::Idle,
             resolution: (0, 0),
             format: [0; 4],
@@ -534,12 +545,47 @@ impl Camera {
     ///
     /// # Panics
     /// If called w/o streaming.
+    #[cfg(not(feature = "tokio_async"))]
     pub fn capture(&self) -> io::Result<Frame> {
         assert_eq!(self.state, State::Streaming);
 
         let mut buf = v4l2::Buffer::new();
 
         v4l2::xioctl(self.fd, v4l2::VIDIOC_DQBUF, &mut buf)?;
+        assert!(buf.index < self.buffers.len() as u32);
+
+        Ok(Frame {
+            resolution: self.resolution,
+            format: self.format,
+            region: self.buffers[buf.index as usize].clone(),
+            length: buf.bytesused,
+            fd: self.fd,
+            buffer: buf,
+        })
+    }
+
+    /// Async request of frame.
+    /// It dequeues buffer from a driver, which will be enqueueed after destructing `Frame`.
+    ///
+    /// # Panics
+    /// If called w/o streaming.
+    #[cfg(feature = "tokio_async")]
+    pub async fn capture(&self) -> io::Result<Frame> {
+        assert_eq!(self.state, State::Streaming);
+
+        let mut buf = v4l2::Buffer::new();
+
+        loop {
+            let mut guard = self.async_fd.readable().await?;
+
+            match guard.try_io(|fd| v4l2::xioctl(*fd.get_ref(), v4l2::VIDIOC_DQBUF, &mut buf)) {
+                Ok(res) => {
+                    res?;
+                    break;
+                }
+                Err(_would_block) => continue,
+            }
+        }
         assert!(buf.index < self.buffers.len() as u32);
 
         Ok(Frame {

@@ -36,14 +36,17 @@ use std::result;
 use std::slice;
 use std::str;
 use std::sync::Arc;
+use std::time::Duration;
 
-#[cfg(feature = "tokio_async")]
-use tokio::io::unix::AsyncFd;
+use libc::timespec;
+
+use crate::pselect::{make_timespec, pselect, FdSet};
 
 pub use self::consts::*;
 pub use self::v4l2::pubconsts as consts;
 use self::v4l2::MappedRegion;
 
+mod pselect;
 mod v4l2;
 
 pub type Result<T> = result::Result<T, Error>;
@@ -79,6 +82,8 @@ pub struct Config<'a> {
     /// Number of buffers in the queue of camera.
     /// Default is `2`.
     pub nbuffers: u32,
+    /// Timeout for capturing a frame.
+    pub timeout: Option<Duration>,
 }
 
 impl<'a> Default for Config<'a> {
@@ -89,6 +94,7 @@ impl<'a> Default for Config<'a> {
             format: b"YUYV",
             field: FIELD_NONE,
             nbuffers: 2,
+            timeout: None,
         }
     }
 }
@@ -248,31 +254,31 @@ enum State {
 
 pub struct Camera {
     fd: RawFd,
-    #[cfg(feature = "tokio_async")]
-    async_fd: AsyncFd<RawFd>,
     state: State,
     resolution: (u32, u32),
     format: [u8; 4],
     buffers: Vec<Arc<MappedRegion>>,
+    fd_set: FdSet,
+    timeout: Option<timespec>,
 }
 
 impl Camera {
     pub fn new(device: &str) -> io::Result<Camera> {
-        #[cfg(feature = "tokio_async")]
-        let fd = v4l2::open(device, false)?;
-        #[cfg(not(feature = "tokio_async"))]
-        let fd = v4l2::open(device, true)?;
+        let fd = v4l2::open(device)?;
+        let mut fd_set = FdSet::new();
+        fd_set.set(fd);
         Ok(Camera {
             fd,
-            #[cfg(feature = "tokio_async")]
-            async_fd: AsyncFd::new(fd)?,
             state: State::Idle,
             resolution: (0, 0),
             format: [0; 4],
             buffers: vec![],
+            fd_set,
+            timeout: None,
         })
     }
 
+    /// Sets the timeout for capturing an image.
     /// Get detailed info about the available formats.
     pub fn formats(&self) -> FormatIter<'_> {
         FormatIter {
@@ -521,6 +527,7 @@ impl Camera {
         self.tune_format(config.resolution, *config.format, config.field)?;
         self.tune_stream(config.interval)?;
         self.alloc_buffers(config.nbuffers)?;
+        self.timeout = config.timeout.map(make_timespec);
 
         if let Err(err) = self.streamon() {
             self.free_buffers();
@@ -545,47 +552,21 @@ impl Camera {
     ///
     /// # Panics
     /// If called w/o streaming.
-    #[cfg(not(feature = "tokio_async"))]
-    pub fn capture(&self) -> io::Result<Frame> {
+    pub fn capture(&mut self) -> io::Result<Frame> {
         assert_eq!(self.state, State::Streaming);
+
+        pselect(
+            self.fd + 1,
+            Some(&mut self.fd_set),
+            None,
+            None,
+            self.timeout.as_ref(),
+            None,
+        )?;
 
         let mut buf = v4l2::Buffer::new();
 
         v4l2::xioctl(self.fd, v4l2::VIDIOC_DQBUF, &mut buf)?;
-        assert!(buf.index < self.buffers.len() as u32);
-
-        Ok(Frame {
-            resolution: self.resolution,
-            format: self.format,
-            region: self.buffers[buf.index as usize].clone(),
-            length: buf.bytesused,
-            fd: self.fd,
-            buffer: buf,
-        })
-    }
-
-    /// Async request of frame.
-    /// It dequeues buffer from a driver, which will be enqueueed after destructing `Frame`.
-    ///
-    /// # Panics
-    /// If called w/o streaming.
-    #[cfg(feature = "tokio_async")]
-    pub async fn capture(&self) -> io::Result<Frame> {
-        assert_eq!(self.state, State::Streaming);
-
-        let mut buf = v4l2::Buffer::new();
-
-        loop {
-            let mut guard = self.async_fd.readable().await?;
-
-            match guard.try_io(|fd| v4l2::xioctl(*fd.get_ref(), v4l2::VIDIOC_DQBUF, &mut buf)) {
-                Ok(res) => {
-                    res?;
-                    break;
-                }
-                Err(_would_block) => continue,
-            }
-        }
         assert!(buf.index < self.buffers.len() as u32);
 
         Ok(Frame {

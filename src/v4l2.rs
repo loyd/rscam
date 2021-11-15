@@ -55,13 +55,9 @@ macro_rules! check_io(
         (if $cond { Ok(()) } else { Err(io::Error::last_os_error()) }?)
 );
 
-pub fn open(file: &str, sync: bool) -> io::Result<RawFd> {
+pub fn open(file: &str) -> io::Result<RawFd> {
     let c_str = CString::new(file)?;
-    let mut oflag = O_RDWR;
-    if !sync {
-        oflag |= O_NONBLOCK;
-    }
-    let fd = unsafe { ll::open(c_str.as_ptr(), oflag, 0) };
+    let fd = unsafe { ll::open(c_str.as_ptr(), O_RDWR | O_NONBLOCK, 0) };
     check_io!(fd != -1);
     Ok(fd)
 }

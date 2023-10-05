@@ -1,10 +1,14 @@
-rscam
-=====
+# rscam
 
 [![Build status](https://travis-ci.org/loyd/rscam.svg)](https://travis-ci.org/loyd/rscam)
 [![Crate info](https://img.shields.io/crates/v/rscam.svg)](https://crates.io/crates/rscam)
 [![Documentation](https://docs.rs/rscam/badge.svg)](https://docs.rs/rscam)
 
+## This project is no longer maintained
+Consider to use [https://github.com/raymanfx/libv4l-rs](libv4l-rs) or something else.
+If you would be interested in taking over some of the maintenance of the project, please let me know.
+
+## Overview
 
 Rust wrapper for v4l2.
 

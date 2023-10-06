@@ -1,6 +1,7 @@
 #![allow(clippy::unreadable_literal)]
 
 use std::ffi::CString;
+use std::fmt;
 use std::os::unix::io::RawFd;
 use std::ptr::null_mut;
 use std::{io, mem, usize};
@@ -94,6 +95,7 @@ pub fn xioctl_valid<T>(fd: RawFd, request: usize, arg: &mut T) -> io::Result<boo
     }
 }
 
+#[derive(Debug)]
 pub struct MappedRegion {
     pub ptr: *mut u8,
     pub len: usize,
@@ -130,12 +132,15 @@ pub fn mmap(length: usize, fd: RawFd, offset: usize) -> io::Result<MappedRegion>
     })
 }
 
+#[derive(Derivative)]
+#[derivative(Debug)]
 #[repr(C)]
 pub struct Format {
     pub ftype: u32,
     #[cfg(target_pointer_width = "64")]
     padding: u32,
     pub fmt: PixFormat,
+    #[derivative(Debug = "ignore")]
     space: [u8; 156],
 }
 
@@ -160,6 +165,8 @@ impl Format {
     }
 }
 
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C)]
 pub struct PixFormat {
     pub width: u32,
@@ -186,6 +193,8 @@ impl PixFormat {
     }
 }
 
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C)]
 pub struct RequestBuffers {
     pub count: u32,
@@ -205,6 +214,8 @@ impl RequestBuffers {
     }
 }
 
+#[derive(Derivative)]
+#[derivative(Debug)]
 #[repr(C)]
 pub struct Buffer {
     pub index: u32,
@@ -212,6 +223,7 @@ pub struct Buffer {
     pub bytesused: u32,
     pub flags: u32,
     pub field: u32,
+    #[derivative(Debug = "ignore")]
     pub timestamp: Timeval,
     pub timecode: TimeCode,
     pub sequence: u32,
@@ -231,6 +243,8 @@ impl Buffer {
     }
 }
 
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C)]
 pub struct TimeCode {
     pub ttype: u32,
@@ -242,6 +256,8 @@ pub struct TimeCode {
     pub userbits: [u8; 4],
 }
 
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C)]
 pub struct FmtDesc {
     pub index: u32,
@@ -260,10 +276,13 @@ impl FmtDesc {
     }
 }
 
+#[derive(Derivative)]
+#[derivative(Debug)]
 #[repr(C)]
 pub struct StreamParm {
     pub ptype: u32,
     pub parm: CaptureParm,
+    #[derivative(Debug = "ignore")]
     space: [u8; 160],
 }
 
@@ -277,6 +296,8 @@ impl StreamParm {
     }
 }
 
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C)]
 pub struct CaptureParm {
     pub capability: u32,
@@ -287,12 +308,16 @@ pub struct CaptureParm {
     reserved: [u32; 4],
 }
 
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C)]
 pub struct Fract {
     pub numerator: u32,
     pub denominator: u32,
 }
 
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C)]
 pub struct Frmsizeenum {
     pub index: u32,
@@ -318,12 +343,16 @@ impl Frmsizeenum {
     }
 }
 
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C)]
 pub struct FrmsizeDiscrete {
     pub width: u32,
     pub height: u32,
 }
 
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C)]
 pub struct FrmsizeStepwise {
     pub min_width: u32,
@@ -334,6 +363,8 @@ pub struct FrmsizeStepwise {
     pub step_height: u32,
 }
 
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C)]
 pub struct Frmivalenum {
     pub index: u32,
@@ -363,6 +394,8 @@ impl Frmivalenum {
     }
 }
 
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C)]
 pub struct FrmivalStepwise {
     pub min: Fract,
@@ -370,6 +403,28 @@ pub struct FrmivalStepwise {
     pub step: Fract,
 }
 
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
+#[repr(C)]
+pub struct Capability {
+    pub driver: [u8; 16],
+    pub card: [u8; 32],
+    pub bus_info: [u8; 32],
+    pub version: u32,
+    pub capabilities: u32,
+    pub device_caps: u32,
+    pub reserved: [u32; 3],
+}
+
+impl Capability {
+    pub fn new() -> Self {
+        let capability: Self = unsafe { mem::zeroed() };
+        capability
+    }
+}
+
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C)]
 pub struct QueryCtrl {
     pub id: u32,
@@ -391,6 +446,8 @@ impl QueryCtrl {
     }
 }
 
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C)]
 pub struct QueryExtCtrl {
     pub id: u32,
@@ -418,18 +475,36 @@ impl QueryExtCtrl {
     }
 }
 
+#[derive(Derivative, Debug, Copy, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C, packed)]
 pub struct QueryMenu {
     pub id: u32,
     pub index: u32,
+    //#[derivative(Debug="ignore")]
+    #[serde(skip_serializing)]
+    #[serde(skip_deserializing)]
     pub data: QueryMenuData,
     reserved: u32,
 }
 
+#[derive(Copy, Clone)]
 #[repr(C, packed)]
 pub union QueryMenuData {
     name: [u8; 32],
     value: i64,
+}
+
+impl Default for QueryMenuData {
+    fn default() -> Self {
+        QueryMenuData { value: 0 }
+    }
+}
+
+impl fmt::Debug for QueryMenuData {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self.name())
+    }
 }
 
 impl QueryMenu {
@@ -450,6 +525,8 @@ impl QueryMenuData {
     }
 }
 
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C)]
 pub struct Control {
     pub id: u32,
@@ -462,6 +539,8 @@ impl Control {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 #[repr(C, packed)]
 pub struct ExtControl {
     pub id: u32,
@@ -481,6 +560,8 @@ impl ExtControl {
     }
 }
 
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 #[repr(C)]
 pub struct ExtControls<'a> {
     pub ctrl_class: u32,
@@ -1271,6 +1352,7 @@ pub mod pubconsts {
 }
 
 // IOCTL codes.
+pub const VIDIOC_QUERYCAP: usize = 2154321408;
 pub const VIDIOC_ENUM_FMT: usize = 3225441794;
 pub const VIDIOC_ENUM_FRAMEINTERVALS: usize = 3224655435;
 pub const VIDIOC_ENUM_FRAMESIZES: usize = 3224131146;

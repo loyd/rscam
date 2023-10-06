@@ -45,6 +45,12 @@ mod v4l2;
 
 pub type Result<T> = result::Result<T, Error>;
 
+#[cfg(feature = "serde")]
+extern crate serde;
+
+#[macro_use]
+extern crate derivative;
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("I/O error: {0}")]
@@ -59,6 +65,8 @@ pub enum Error {
     BadField,
 }
 
+#[derive(Debug, Copy, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Config<'a> {
     /// The mix of numerator and denominator. v4l2 uses frame intervals instead of frame rates.
     /// Default is `(1, 10)`.
@@ -90,6 +98,7 @@ impl<'a> Default for Config<'a> {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub struct FormatInfo {
     /// FourCC of format (e.g. `b"H264"`).
     pub format: [u8; 4],
@@ -139,6 +148,7 @@ impl fmt::Debug for FormatInfo {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub enum ResolutionInfo {
     Discretes(Vec<(u32, u32)>),
     Stepwise {
@@ -169,6 +179,7 @@ impl fmt::Debug for ResolutionInfo {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub enum IntervalInfo {
     Discretes(Vec<(u32, u32)>),
     Stepwise {
@@ -201,6 +212,7 @@ impl fmt::Debug for IntervalInfo {
     }
 }
 
+#[derive(Debug)]
 pub struct Frame {
     /// Width and height of the frame.
     pub resolution: (u32, u32),
@@ -237,18 +249,48 @@ impl Drop for Frame {
 }
 
 #[derive(Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 enum State {
     Idle,
     Streaming,
     Aborted,
 }
 
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Camera {
     fd: RawFd,
     state: State,
     resolution: (u32, u32),
     format: [u8; 4],
+    #[cfg_attr(feature = "serde", serde(skip_serializing))]
     buffers: Vec<Arc<MappedRegion>>,
+}
+
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
+pub struct Capability {
+    driver: String,
+    card: String,
+    bus_info: String,
+    version: u32,
+    capabilities: u32,
+    device_caps: u32,
+}
+
+fn cstring_to_string(array: &[u8]) -> Result<&str> {
+    let position = array.iter().position(|&byte| byte == 0).map_or(0, |position| position);
+    match std::str::from_utf8(&array[..position]) {
+        Ok(content) => Ok(content),
+        Err(error) => {
+            let (valid, _) = array.split_at(error.valid_up_to());
+            if !valid.is_empty() {
+                return Ok(std::str::from_utf8(valid).unwrap());
+            }
+
+            return Err(Error::BadFormat);
+        }
+    }
 }
 
 impl Camera {
@@ -260,6 +302,21 @@ impl Camera {
             format: [0; 4],
             buffers: vec![],
         })
+    }
+
+    pub fn capability(&self) -> Result<Capability> {
+        let mut capability = v4l2::Capability::new();
+        v4l2::xioctl(self.fd, v4l2::VIDIOC_QUERYCAP, &mut capability).unwrap();
+        Ok(
+            Capability {
+                driver: cstring_to_string(&capability.driver)?.to_owned(),
+                card: cstring_to_string(&capability.card)?.to_owned(),
+                bus_info: cstring_to_string(&capability.bus_info)?.to_owned(),
+                version: capability.version,
+                capabilities: capability.capabilities,
+                device_caps: capability.device_caps,
+            }
+        )
     }
 
     /// Get detailed info about the available formats.
@@ -606,7 +663,7 @@ impl Camera {
 
         v4l2::xioctl(self.fd, v4l2::VIDIOC_REQBUFS, &mut req)?;
 
-        for i in 0..nbuffers {
+        for i in 0..req.count {
             let mut buf = v4l2::Buffer::new();
             buf.index = i;
             v4l2::xioctl(self.fd, v4l2::VIDIOC_QUERYBUF, &mut buf)?;
@@ -654,6 +711,8 @@ impl Drop for Camera {
     }
 }
 
+#[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct FormatIter<'a> {
     camera: &'a Camera,
     index: u32,
@@ -681,6 +740,7 @@ impl<'a> Iterator for FormatIter<'a> {
     }
 }
 
+#[derive(Debug)]
 pub struct ControlIter<'a> {
     camera: &'a Camera,
     id: u32,
@@ -744,6 +804,7 @@ impl Settable for String {
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub struct Control {
     pub id: u32,
     pub name: String,
@@ -753,6 +814,7 @@ pub struct Control {
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub enum CtrlData {
     Integer {
         value: i32,
@@ -799,12 +861,14 @@ pub enum CtrlData {
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub struct CtrlMenuItem {
     pub index: u32,
     pub name: String,
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Deserialize, serde::Serialize))]
 pub struct CtrlIntMenuItem {
     pub index: u32,
     pub value: i64,

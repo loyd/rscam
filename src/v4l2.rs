@@ -17,9 +17,20 @@ mod ll {
 
     pub use self::v4l2_close as close;
     pub use self::v4l2_ioctl as ioctl;
-    pub use self::v4l2_mmap as mmap;
     pub use self::v4l2_munmap as munmap;
     pub use self::v4l2_open as open;
+
+    pub unsafe fn mmap(
+        start: *mut c_void,
+        length: size_t,
+        prot: c_int,
+        flags: c_int,
+        fd: RawFd,
+        offset: off_t,
+    ) -> *mut c_void {
+        // Note the subtle function signature mismatch between mmap and v4l2_mmap.
+        v4l2_mmap(start, length, prot, flags, fd, offset as i64)
+    }
 
     #[link(name = "v4l2")]
     extern "C" {
@@ -32,7 +43,7 @@ mod ll {
             prot: c_int,
             flags: c_int,
             fd: RawFd,
-            offset: off_t,
+            offset: i64,
         ) -> *mut c_void;
         pub fn v4l2_munmap(start: *mut c_void, length: size_t) -> c_int;
     }
@@ -40,10 +51,21 @@ mod ll {
 
 #[cfg(feature = "no_wrapper")]
 mod ll {
-    use libc::{c_int, c_ulong, c_void};
+    use libc::{c_int, c_ulong, c_void, off_t, size_t};
     use std::os::unix::io::RawFd;
 
-    pub use libc::{close, mmap, munmap, open};
+    pub use libc::{close, munmap, open};
+
+    pub unsafe fn mmap(
+        start: *mut c_void,
+        length: size_t,
+        prot: c_int,
+        flags: c_int,
+        fd: RawFd,
+        offset: off_t,
+    ) -> *mut c_void {
+        libc::mmap(start, length, prot, flags, fd, offset)
+    }
 
     extern "C" {
         pub fn ioctl(fd: RawFd, request: c_ulong, argp: *mut c_void) -> c_int;

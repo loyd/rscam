@@ -6,8 +6,8 @@ use std::ptr::null_mut;
 use std::{io, mem, usize};
 
 // C types and constants.
-use libc::timeval as Timeval;
 use libc::{c_ulong, c_void, off_t, size_t};
+use libc::{timeval as Timeval, O_NONBLOCK};
 use libc::{MAP_SHARED, O_RDWR, PROT_READ, PROT_WRITE};
 
 #[cfg(not(feature = "no_wrapper"))]
@@ -57,7 +57,7 @@ macro_rules! check_io(
 
 pub fn open(file: &str) -> io::Result<RawFd> {
     let c_str = CString::new(file)?;
-    let fd = unsafe { ll::open(c_str.as_ptr(), O_RDWR, 0) };
+    let fd = unsafe { ll::open(c_str.as_ptr(), O_RDWR | O_NONBLOCK, 0) };
     check_io!(fd != -1);
     Ok(fd)
 }

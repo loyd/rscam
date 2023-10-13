@@ -21,7 +21,8 @@ mod ll {
     pub use self::v4l2_munmap as munmap;
     pub use self::v4l2_open as open;
 
-    #[link(name = "v4l2")]
+    #[cfg_attr(feature = "static", link(name = "v4l2", kind = "static"))]
+    #[cfg_attr(not(feature = "static"), link(name = "v4l2"))]
     extern "C" {
         pub fn v4l2_open(file: *const c_char, flags: c_int, arg: c_int) -> RawFd;
         pub fn v4l2_close(fd: RawFd) -> c_int;
